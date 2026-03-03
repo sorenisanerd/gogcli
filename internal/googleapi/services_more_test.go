@@ -62,6 +62,18 @@ func TestNewServicesWithStoredToken(t *testing.T) {
 		t.Fatalf("NewTasks: %v", err)
 	}
 
+	if _, err := NewAnalyticsAdmin(ctx, "a@b.com"); err != nil {
+		t.Fatalf("NewAnalyticsAdmin: %v", err)
+	}
+
+	if _, err := NewAnalyticsData(ctx, "a@b.com"); err != nil {
+		t.Fatalf("NewAnalyticsData: %v", err)
+	}
+
+	if _, err := NewSearchConsole(ctx, "a@b.com"); err != nil {
+		t.Fatalf("NewSearchConsole: %v", err)
+	}
+
 	if _, err := NewKeep(ctx, "a@b.com"); err != nil {
 		t.Fatalf("NewKeep: %v", err)
 	}

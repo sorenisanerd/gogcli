@@ -3,7 +3,7 @@
 ![GitHub Repo Banner](https://ghrb.waren.build/banner?header=gogcli%F0%9F%A7%AD&subheader=Google+in+your+terminal&bg=f3f4f6&color=1f2937&support=true)
 <!-- Created with GitHub Repo Banner by Waren Gonzaga: https://ghrb.waren.build -->
 
-Fast, script-friendly CLI for Gmail, Calendar, Chat, Classroom, Drive, Docs, Slides, Sheets, Forms, Apps Script, Contacts, Tasks, People, Admin, Groups (Workspace), and Keep (Workspace-only). JSON-first output, multiple accounts, and flexible auth built in.
+Fast, script-friendly CLI for Gmail, Calendar, Chat, Classroom, Drive, Docs, Slides, Sheets, Forms, Apps Script, Analytics, Search Console, Contacts, Tasks, People, Admin, Groups (Workspace), and Keep (Workspace-only). JSON-first output, multiple accounts, and flexible auth built in.
 
 ## Features
 
@@ -18,6 +18,8 @@ Fast, script-friendly CLI for Gmail, Calendar, Chat, Classroom, Drive, Docs, Sli
 - **Sheets** - read/write/update spreadsheets, insert rows/cols, manage tabs and named ranges, format/merge/freeze/resize cells, read/write notes, inspect formats, find/replace text, list links, and create/export sheets
 - **Forms** - create/update forms, manage questions, inspect responses, and manage watches
 - **Apps Script** - create/get/bind projects, inspect content, and run functions
+- **Analytics** - list GA4 account summaries and run reports via the Analytics Data API
+- **Search Console** - list properties and run Search Analytics queries
 - **Docs/Slides** - create/copy/export docs/slides, edit Docs by tab, import Markdown, do richer find-replace, export Docs as Markdown/HTML, and generate Slides from Markdown or templates
 - **People** - profile lookup and directory search helpers
 - **Keep (Workspace only)** - list/get/search/create/delete notes and download attachments (service account + domain-wide delegation)
@@ -93,6 +95,9 @@ Before adding an account, create OAuth2 credentials from Google Cloud Console:
    - Google Sheets API: https://console.cloud.google.com/apis/api/sheets.googleapis.com
    - Google Forms API: https://console.cloud.google.com/apis/api/forms.googleapis.com
    - Google Slides API: https://console.cloud.google.com/apis/api/slides.googleapis.com
+   - Google Analytics Admin API: https://console.cloud.google.com/apis/api/analyticsadmin.googleapis.com
+   - Google Analytics Data API: https://console.cloud.google.com/apis/api/analyticsdata.googleapis.com
+   - Google Search Console API: https://console.cloud.google.com/apis/api/searchconsole.googleapis.com
 3. Configure OAuth consent screen: https://console.cloud.google.com/auth/branding
 4. If your app is in "Testing", add test users: https://console.cloud.google.com/auth/audience
 5. Create OAuth client:
@@ -395,6 +400,8 @@ Service scope matrix (auto-generated; run `go run scripts/gen-auth-services-md.g
 | people | yes | People API | `profile` | OIDC profile scope |
 | forms | yes | Forms API | `https://www.googleapis.com/auth/forms.body`<br>`https://www.googleapis.com/auth/forms.responses.readonly` |  |
 | appscript | yes | Apps Script API | `https://www.googleapis.com/auth/script.projects`<br>`https://www.googleapis.com/auth/script.deployments`<br>`https://www.googleapis.com/auth/script.processes` |  |
+| analytics | yes | Analytics Admin API, Analytics Data API | `https://www.googleapis.com/auth/analytics.readonly` | GA4 account summaries + reporting |
+| searchconsole | yes | Search Console API | `https://www.googleapis.com/auth/webmasters.readonly` |  |
 | groups | no | Cloud Identity API | `https://www.googleapis.com/auth/cloud-identity.groups.readonly` | Workspace only |
 | keep | no | Keep API | `https://www.googleapis.com/auth/keep` | Workspace only; service account (domain-wide delegation) |
 <!-- auth-services:end -->
@@ -1137,6 +1144,29 @@ gog appscript create --title "Bound Script" --parent-id <driveFileId>
 # Execute functions
 gog appscript run <scriptId> myFunction --params '["arg1", 123, true]'
 gog appscript run <scriptId> myFunction --dev-mode
+```
+
+### Analytics
+
+```bash
+# Account summaries (helps discover property IDs)
+gog analytics accounts
+gog analytics accounts --all
+
+# GA4 reports
+gog analytics report 123456789 --from 2026-02-01 --to 2026-02-07 --dimensions date,country --metrics activeUsers,sessions
+gog analytics report properties/123456789 --from 7daysAgo --to today --dimensions date --metrics totalUsers,newUsers --max 200
+```
+
+### Search Console
+
+```bash
+# Sites/properties
+gog searchconsole sites
+
+# Search Analytics query
+gog searchconsole query sc-domain:example.com --from 2026-02-01 --to 2026-02-07 --dimensions query,page --type WEB --max 1000
+gog searchconsole query https://example.com/ --from 2026-02-01 --to 2026-02-07 --dimensions date --type WEB
 ```
 
 ### People

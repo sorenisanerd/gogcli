@@ -10,22 +10,24 @@ import (
 type Service string
 
 const (
-	ServiceGmail     Service = "gmail"
-	ServiceCalendar  Service = "calendar"
-	ServiceChat      Service = "chat"
-	ServiceClassroom Service = "classroom"
-	ServiceDrive     Service = "drive"
-	ServiceDocs      Service = "docs"
-	ServiceSlides    Service = "slides"
-	ServiceContacts  Service = "contacts"
-	ServiceTasks     Service = "tasks"
-	ServicePeople    Service = "people"
-	ServiceSheets    Service = "sheets"
-	ServiceForms     Service = "forms"
-	ServiceAppScript Service = "appscript"
-	ServiceGroups    Service = "groups"
-	ServiceKeep      Service = "keep"
-	ServiceAdmin     Service = "admin"
+	ServiceGmail         Service = "gmail"
+	ServiceCalendar      Service = "calendar"
+	ServiceChat          Service = "chat"
+	ServiceClassroom     Service = "classroom"
+	ServiceDrive         Service = "drive"
+	ServiceDocs          Service = "docs"
+	ServiceSlides        Service = "slides"
+	ServiceContacts      Service = "contacts"
+	ServiceTasks         Service = "tasks"
+	ServicePeople        Service = "people"
+	ServiceSheets        Service = "sheets"
+	ServiceForms         Service = "forms"
+	ServiceAppScript     Service = "appscript"
+	ServiceAnalytics     Service = "analytics"
+	ServiceSearchConsole Service = "searchconsole"
+	ServiceGroups        Service = "groups"
+	ServiceKeep          Service = "keep"
+	ServiceAdmin         Service = "admin"
 )
 
 const (
@@ -83,6 +85,8 @@ var serviceOrder = []Service{
 	ServicePeople,
 	ServiceForms,
 	ServiceAppScript,
+	ServiceAnalytics,
+	ServiceSearchConsole,
 	ServiceGroups,
 	ServiceKeep,
 	ServiceAdmin,
@@ -202,6 +206,17 @@ var serviceInfoByService = map[Service]serviceInfo{
 		},
 		user: true,
 		apis: []string{"Apps Script API"},
+	},
+	ServiceAnalytics: {
+		scopes: []string{"https://www.googleapis.com/auth/analytics.readonly"},
+		user:   true,
+		apis:   []string{"Analytics Admin API", "Analytics Data API"},
+		note:   "GA4 account summaries + reporting",
+	},
+	ServiceSearchConsole: {
+		scopes: []string{"https://www.googleapis.com/auth/webmasters.readonly"},
+		user:   true,
+		apis:   []string{"Search Console API"},
 	},
 	ServiceGroups: {
 		scopes: []string{"https://www.googleapis.com/auth/cloud-identity.groups.readonly"},
@@ -551,6 +566,10 @@ func scopesForServiceWithOptions(service Service, opts ScopeOptions) ([]string, 
 			}, nil
 		}
 
+		return Scopes(service)
+	case ServiceAnalytics:
+		return Scopes(service)
+	case ServiceSearchConsole:
 		return Scopes(service)
 	case ServiceGroups:
 		return Scopes(service)
