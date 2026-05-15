@@ -29,6 +29,7 @@
 - CLI: make dry-runs for Admin group/user/org-unit edits, Contacts delete, Docs tab export, Drive tab download/share/unshare, and Gmail watch renew stay offline before auth/API calls; redact Admin user create passwords in dry-run output.
 - Auth: keep fresh OAuth saves working even when old file-keyring token entries are unreadable, and clarify that `--services all` means all user OAuth services while Workspace-only services use service accounts.
 - Auth: include Chat reaction scopes in `--services chat` and keep the generated auth scope table freshness-tested.
+- Auth: keep the accounts manager bound to loopback addresses, generate callback URLs from the actual listener host, and avoid deleting renamed-account tokens before replacements are stored.
 - Gmail: reject off-palette `gmail labels style` colors locally instead of forwarding an opaque Gmail API error.
 - Drive: make `drive share --dry-run` stop before permission creation for user and domain shares, including `--notify`.
 - Forms: make `forms create --description` apply the description with a follow-up batch update, and preserve zero-valued indexes in `forms move-question`.

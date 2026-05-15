@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -100,6 +101,15 @@ func StartManageServer(ctx context.Context, opts ManageServerOptions) error {
 
 	opts.Client = client
 
+	listenAddr, err := normalizeListenAddr(opts.ListenAddr)
+	if err != nil {
+		return err
+	}
+
+	if validationErr := validateManagementListenAddr(listenAddr); validationErr != nil {
+		return validationErr
+	}
+
 	if strings.TrimSpace(opts.RedirectURI) != "" {
 		resolvedRedirectURI, normalizeErr := normalizeRedirectURI(opts.RedirectURI)
 		if normalizeErr != nil {
@@ -116,11 +126,6 @@ func StartManageServer(ctx context.Context, opts ManageServerOptions) error {
 	csrfToken, err := generateCSRFToken()
 	if err != nil {
 		return fmt.Errorf("failed to generate CSRF token: %w", err)
-	}
-
-	listenAddr, err := normalizeListenAddr(opts.ListenAddr)
-	if err != nil {
-		return err
 	}
 
 	ln, err := (&net.ListenConfig{}).Listen(ctx, "tcp", listenAddr)
@@ -170,8 +175,7 @@ func StartManageServer(ctx context.Context, opts ManageServerOptions) error {
 		}
 	}()
 
-	port := ln.Addr().(*net.TCPAddr).Port
-	url := fmt.Sprintf("http://127.0.0.1:%d", port)
+	url := listenerBaseURL(ln)
 
 	fmt.Fprintln(os.Stderr, "Opening accounts manager in browser...")
 	fmt.Fprintln(os.Stderr, "If the browser doesn't open, visit:", url)
@@ -438,9 +442,9 @@ func (ms *ManageServer) handleOAuthCallback(w http.ResponseWriter, r *http.Reque
 	}
 
 	if needKeychain {
-		if err := ensureKeychainAccess(); err != nil { //nolint:contextcheck,nolintlint // keychain ops don't use context; nolint unused on non-Darwin
+		if keychainErr := ensureKeychainAccess(); keychainErr != nil { //nolint:contextcheck,nolintlint // keychain ops don't use context; nolint unused on non-Darwin
 			w.WriteHeader(http.StatusInternalServerError)
-			renderErrorPage(w, "Keychain is locked: "+err.Error())
+			renderErrorPage(w, "Keychain is locked: "+keychainErr.Error())
 
 			return
 		}
@@ -451,15 +455,14 @@ func (ms *ManageServer) handleOAuthCallback(w http.ResponseWriter, r *http.Reque
 		serviceNames = append(serviceNames, string(svc))
 	}
 
-	if _, err := MigrateStoredSubjectIdentity(ms.store, ms.client, identity); err != nil {
+	migratedEmail, err := FindStoredSubjectIdentityEmail(ms.store, ms.client, identity)
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		renderErrorPage(w, "Failed to migrate stored token: "+err.Error())
+		renderErrorPage(w, "Failed to inspect stored token: "+err.Error())
 
 		return
 	}
 
-	// Store the token after subject migration so deleting the old email alias
-	// cannot remove the freshly written subject-keyed token.
 	if err := ms.store.SetToken(ms.client, email, secrets.Token{
 		Subject:      identity.Subject,
 		Email:        email,
@@ -471,6 +474,19 @@ func (ms *ManageServer) handleOAuthCallback(w http.ResponseWriter, r *http.Reque
 		renderErrorPage(w, "Failed to store token: "+err.Error())
 
 		return
+	}
+
+	if migratedEmail != "" {
+		if err := MigrateStoredEmailReferences(ms.store, ms.client, migratedEmail, email); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			renderErrorPage(w, "Failed to migrate stored token references: "+err.Error())
+
+			return
+		}
+
+		if err := DeleteStoredEmailAlias(ms.store, ms.client, migratedEmail); err != nil {
+			slog.Warn("delete migrated token alias failed", "old_email", migratedEmail, "new_email", email, "client", ms.client, "err", err)
+		}
 	}
 
 	// Render success page with the new template

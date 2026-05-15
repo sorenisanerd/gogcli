@@ -1,7 +1,6 @@
 package googleauth
 
 import (
-	"errors"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -96,7 +95,7 @@ func (s *migrationStore) SetDefaultAccount(_ string, email string) error {
 	return nil
 }
 
-func TestMigrateStoredSubjectIdentityUpdatesEmailState(t *testing.T) {
+func TestMigrateStoredSubjectIdentityUpdatesEmailReferences(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "xdg"))
@@ -131,8 +130,8 @@ func TestMigrateStoredSubjectIdentityUpdatesEmailState(t *testing.T) {
 		t.Fatalf("expected migrated old email, got %q", migrated)
 	}
 
-	if _, getErr := store.GetToken(config.DefaultClientName, "old@example.com"); !errors.Is(getErr, keyring.ErrKeyNotFound) {
-		t.Fatalf("expected old token deleted, got %v", getErr)
+	if _, getErr := store.GetToken(config.DefaultClientName, "old@example.com"); getErr != nil {
+		t.Fatalf("expected old token preserved until replacement is stored, got %v", getErr)
 	}
 
 	if store.defaultEmail != "new@example.com" {
@@ -157,7 +156,7 @@ func TestMigrateStoredSubjectIdentityUpdatesEmailState(t *testing.T) {
 	}
 }
 
-func TestMigrateStoredSubjectIdentityDeletesOldWhenNewAlreadyStored(t *testing.T) {
+func TestMigrateStoredSubjectIdentityPreservesOldTokenWhenNewAlreadyStored(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "xdg"))
@@ -191,8 +190,8 @@ func TestMigrateStoredSubjectIdentityDeletesOldWhenNewAlreadyStored(t *testing.T
 		t.Fatalf("expected migrated old email, got %q", migrated)
 	}
 
-	if _, getErr := store.GetToken(config.DefaultClientName, "old@example.com"); !errors.Is(getErr, keyring.ErrKeyNotFound) {
-		t.Fatalf("expected old token deleted, got %v", getErr)
+	if _, getErr := store.GetToken(config.DefaultClientName, "old@example.com"); getErr != nil {
+		t.Fatalf("expected old token preserved until alias cleanup, got %v", getErr)
 	}
 
 	if _, getErr := store.GetToken(config.DefaultClientName, "new@example.com"); getErr != nil {

@@ -263,12 +263,9 @@ func (c *AuthAddCmd) Run(ctx context.Context, flags *RootFlags) error {
 	}
 	sort.Strings(serviceNames)
 
-	migratedEmail, err := googleauth.MigrateStoredSubjectIdentity(store, client, identity)
+	migratedEmail, err := googleauth.FindStoredSubjectIdentityEmail(store, client, identity)
 	if err != nil {
 		return wrapAuthAddStoreError(err)
-	}
-	if migratedEmail != "" {
-		u.Err().Linef("Migrated auth account from %s to %s", migratedEmail, authorizedEmail)
 	}
 
 	if err := store.SetToken(client, authorizedEmail, secrets.Token{
@@ -280,6 +277,15 @@ func (c *AuthAddCmd) Run(ctx context.Context, flags *RootFlags) error {
 		RefreshToken: refreshToken,
 	}); err != nil {
 		return wrapAuthAddStoreError(err)
+	}
+	if migratedEmail != "" {
+		if err := googleauth.MigrateStoredEmailReferences(store, client, migratedEmail, authorizedEmail); err != nil {
+			return wrapAuthAddStoreError(err)
+		}
+		if err := googleauth.DeleteStoredEmailAlias(store, client, migratedEmail); err != nil {
+			u.Err().Linef("Warning: failed to remove stale auth account %s: %v", migratedEmail, err)
+		}
+		u.Err().Linef("Migrated auth account from %s to %s", migratedEmail, authorizedEmail)
 	}
 	if override != "" {
 		cfg, err := config.ReadConfig()

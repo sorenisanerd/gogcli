@@ -45,6 +45,11 @@ type stubStore struct {
 	deleteEmail  string
 	deleteCalls  int
 	deleteErr    error
+
+	defaultEmail     string
+	setDefaultClient string
+	setDefaultEmail  string
+	setDefaultCalls  int
 }
 
 func (s *stubStore) Keys() ([]string, error) { return nil, nil }
@@ -79,9 +84,20 @@ func (s *stubStore) DeleteTokenAlias(client string, email string) error {
 	return s.DeleteToken(client, email)
 }
 
-func (s *stubStore) ListTokens() ([]secrets.Token, error)     { return nil, nil }
-func (s *stubStore) GetDefaultAccount(string) (string, error) { return "", nil }
-func (s *stubStore) SetDefaultAccount(string, string) error   { return nil }
+func (s *stubStore) ListTokens() ([]secrets.Token, error) { return nil, nil }
+func (s *stubStore) GetDefaultAccount(string) (string, error) {
+	return s.defaultEmail, nil
+}
+
+func (s *stubStore) SetDefaultAccount(client string, email string) error {
+	s.setDefaultClient = client
+	s.setDefaultEmail = email
+	s.setDefaultCalls++
+	s.defaultEmail = email
+
+	return nil
+}
+
 func (s *stubStore) GetToken(client string, email string) (secrets.Token, error) {
 	s.lastClient = client
 	s.lastEmail = email
@@ -264,8 +280,20 @@ func TestPersistingTokenSource_BackfillsSubjectFromIDToken(t *testing.T) {
 }
 
 func TestPersistingTokenSource_MigratesRenamedEmailFromIDToken(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "xdg"))
+
+	cfg := config.File{
+		AccountAliases: map[string]string{"work": "old@example.com"},
+		AccountClients: map[string]string{"old@example.com": "work-client"},
+	}
+	if err := config.WriteConfig(cfg); err != nil {
+		t.Fatalf("WriteConfig: %v", err)
+	}
+
 	stored := secrets.Token{Email: "old@example.com", RefreshToken: "same-token", Subject: "sub-123"}
-	store := &stubStore{tok: stored}
+	store := &stubStore{tok: stored, defaultEmail: "old@example.com"}
 	base := oauth2.StaticTokenSource((&oauth2.Token{
 		AccessToken:  "access",
 		RefreshToken: "same-token",
@@ -292,6 +320,27 @@ func TestPersistingTokenSource_MigratesRenamedEmailFromIDToken(t *testing.T) {
 
 	if store.deleteCalls != 1 || store.deleteClient != config.DefaultClientName || store.deleteEmail != "old@example.com" {
 		t.Fatalf("expected old alias delete, got calls=%d client=%q email=%q", store.deleteCalls, store.deleteClient, store.deleteEmail)
+	}
+
+	if store.setDefaultCalls != 1 || store.setDefaultClient != config.DefaultClientName || store.setDefaultEmail != "new@example.com" {
+		t.Fatalf("expected default migration, got calls=%d client=%q email=%q", store.setDefaultCalls, store.setDefaultClient, store.setDefaultEmail)
+	}
+
+	updated, err := config.ReadConfig()
+	if err != nil {
+		t.Fatalf("ReadConfig: %v", err)
+	}
+
+	if updated.AccountAliases["work"] != "new@example.com" {
+		t.Fatalf("expected alias migrated, got %#v", updated.AccountAliases)
+	}
+
+	if updated.AccountClients["new@example.com"] != "work-client" {
+		t.Fatalf("expected account client migrated, got %#v", updated.AccountClients)
+	}
+
+	if _, ok := updated.AccountClients["old@example.com"]; ok {
+		t.Fatalf("expected old account client removed, got %#v", updated.AccountClients)
 	}
 
 	pts, ok := ts.(*persistingTokenSource)

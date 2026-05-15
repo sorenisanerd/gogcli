@@ -102,6 +102,10 @@ func (p *persistingTokenSource) Token() (*oauth2.Token, error) {
 	}
 
 	if !strings.EqualFold(p.email, persistEmail) {
+		if err := googleauth.MigrateStoredEmailReferences(p.store, p.client, p.email, persistEmail); err != nil {
+			slog.Warn("migrate renamed token email references failed", "old_email", p.email, "new_email", persistEmail, "client", p.client, "err", err)
+		}
+
 		aliasDeleter, ok := p.store.(tokenAliasDeleter)
 		if !ok {
 			slog.Debug("token store cannot delete renamed email alias", "old_email", p.email, "new_email", persistEmail, "client", p.client)

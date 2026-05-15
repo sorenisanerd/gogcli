@@ -192,3 +192,19 @@ func TestResolveServerRedirectURI(t *testing.T) {
 		t.Fatalf("expected local listener redirect, got %q", got)
 	}
 }
+
+func TestResolveServerRedirectURIUsesIPv6LoopbackListener(t *testing.T) {
+	t.Parallel()
+
+	ln, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", "[::1]:0")
+	if err != nil {
+		t.Skipf("IPv6 loopback unavailable: %v", err)
+	}
+
+	t.Cleanup(func() { _ = ln.Close() })
+
+	got := resolveServerRedirectURI(ln, "")
+	if !strings.HasPrefix(got, "http://[::1]:") {
+		t.Fatalf("expected IPv6 listener redirect, got %q", got)
+	}
+}

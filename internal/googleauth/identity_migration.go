@@ -9,6 +9,20 @@ import (
 )
 
 func MigrateStoredSubjectIdentity(store secrets.Store, client string, identity Identity) (string, error) {
+	oldEmail, err := FindStoredSubjectIdentityEmail(store, client, identity)
+	if err != nil || oldEmail == "" {
+		return oldEmail, err
+	}
+
+	newEmail := normalizeEmail(identity.Email)
+	if err := MigrateStoredEmailReferences(store, client, oldEmail, newEmail); err != nil {
+		return "", err
+	}
+
+	return oldEmail, nil
+}
+
+func FindStoredSubjectIdentityEmail(store secrets.Store, client string, identity Identity) (string, error) {
 	subject := strings.TrimSpace(identity.Subject)
 	newEmail := normalizeEmail(identity.Email)
 
@@ -32,20 +46,6 @@ func MigrateStoredSubjectIdentity(store secrets.Store, client string, identity I
 		oldEmail := normalizeEmail(tok.Email)
 		if oldEmail == "" || oldEmail == newEmail {
 			continue
-		}
-
-		if err := store.DeleteToken(client, oldEmail); err != nil {
-			return "", fmt.Errorf("delete stale token for %s: %w", oldEmail, err)
-		}
-
-		if defaultEmail, getErr := store.GetDefaultAccount(client); getErr == nil && normalizeEmail(defaultEmail) == oldEmail {
-			if setErr := store.SetDefaultAccount(client, newEmail); setErr != nil {
-				return "", fmt.Errorf("set migrated default account: %w", setErr)
-			}
-		}
-
-		if err := migrateStoredSubjectConfig(oldEmail, newEmail); err != nil {
-			return "", err
 		}
 
 		return oldEmail, nil
@@ -83,6 +83,49 @@ func tokensForSubjectMigration(store secrets.Store, client string) ([]secrets.To
 	}
 
 	return tokens, nil
+}
+
+type tokenAliasDeleter interface {
+	DeleteTokenAlias(client string, email string) error
+}
+
+func DeleteStoredEmailAlias(store secrets.Store, client string, email string) error {
+	email = normalizeEmail(email)
+	if email == "" {
+		return nil
+	}
+
+	aliasDeleter, ok := store.(tokenAliasDeleter)
+	if !ok {
+		return nil
+	}
+
+	if err := aliasDeleter.DeleteTokenAlias(client, email); err != nil {
+		return fmt.Errorf("delete stale token alias for %s: %w", email, err)
+	}
+
+	return nil
+}
+
+func MigrateStoredEmailReferences(store secrets.Store, client string, oldEmail string, newEmail string) error {
+	oldEmail = normalizeEmail(oldEmail)
+	newEmail = normalizeEmail(newEmail)
+
+	if oldEmail == "" || newEmail == "" || oldEmail == newEmail {
+		return nil
+	}
+
+	if defaultEmail, getErr := store.GetDefaultAccount(client); getErr == nil && normalizeEmail(defaultEmail) == oldEmail {
+		if setErr := store.SetDefaultAccount(client, newEmail); setErr != nil {
+			return fmt.Errorf("set migrated default account: %w", setErr)
+		}
+	}
+
+	if err := migrateStoredSubjectConfig(oldEmail, newEmail); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func migrateStoredSubjectConfig(oldEmail string, newEmail string) error {

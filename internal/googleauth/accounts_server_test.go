@@ -75,6 +75,10 @@ func (s *fakeStore) DeleteToken(client string, email string) error {
 	return nil
 }
 
+func (s *fakeStore) DeleteTokenAlias(client string, email string) error {
+	return s.DeleteToken(client, email)
+}
+
 func (s *fakeStore) DeleteDefaultAccount(client string) error {
 	s.deleteDefault = true
 	s.deleteDefaultCalled = client
@@ -758,7 +762,7 @@ func TestManageServer_HandleOAuthCallback_Success(t *testing.T) {
 	}
 }
 
-func TestManageServer_HandleOAuthCallback_MigratesBeforeSetToken(t *testing.T) {
+func TestManageServer_HandleOAuthCallback_MigratesAndDeletesAliasAfterSetToken(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 
@@ -831,9 +835,23 @@ func TestManageServer_HandleOAuthCallback_MigratesBeforeSetToken(t *testing.T) {
 		t.Fatalf("status: %d body: %s", rr.Code, rr.Body.String())
 	}
 
-	wantOps := []string{"delete:old@example.com", "set:new@example.com"}
+	wantOps := []string{"set:new@example.com", "delete:old@example.com"}
 	if len(store.ops) != len(wantOps) || store.ops[0] != wantOps[0] || store.ops[1] != wantOps[1] {
 		t.Fatalf("unexpected store ops: %#v", store.ops)
+	}
+}
+
+func TestStartManageServerRejectsNonLoopbackListenAddr(t *testing.T) {
+	err := StartManageServer(context.Background(), ManageServerOptions{
+		ListenAddr: "0.0.0.0:0",
+		Timeout:    50 * time.Millisecond,
+	})
+	if err == nil {
+		t.Fatalf("expected non-loopback listen addr error")
+	}
+
+	if !errors.Is(err, errNonLoopbackManageAddr) {
+		t.Fatalf("expected errNonLoopbackManageAddr, got %v", err)
 	}
 }
 

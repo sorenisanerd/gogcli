@@ -30,7 +30,7 @@ gog auth manage (login) [flags]
 | `--gmail-no-send` | `bool` | false | Block Gmail send operations (agent safety) |
 | `-h`<br>`--help` | `kong.helpFlag` |  | Show context-sensitive help. |
 | `-j`<br>`--json`<br>`--machine` | `bool` | false | Output JSON to stdout (best for scripting) |
-| `--listen-addr` | `string` |  | Address to listen on for OAuth callback (for example 0.0.0.0 or 0.0.0.0:8080) |
+| `--listen-addr` | `string` |  | Loopback address to listen on for the accounts manager (for example 127.0.0.1:8080 or [::1]:8080) |
 | `--no-input`<br>`--non-interactive`<br>`--noninteractive` | `bool` |  | Never prompt; fail instead (useful for CI) |
 | `-p`<br>`--plain`<br>`--tsv` | `bool` | false | Output stable, parseable text to stdout (TSV; no colors) |
 | `--redirect-host` | `string` |  | Hostname for OAuth callback; builds https://{host}/oauth2/callback |
