@@ -1,0 +1,16 @@
+# Protect ownership and automation rules.
+/.github/CODEOWNERS @openclaw/openclaw-secops
+/.github/dependabot.yml @openclaw/openclaw-secops
+/.github/workflows/ @openclaw/openclaw-secops
+/.agents/skills/ @openclaw/openclaw-secops
+/.crabbox.yaml @openclaw/openclaw-secops
+/SECURITY.md @openclaw/openclaw-secops
+
+# Package, release, OAuth, and credential surfaces.
+/go.mod @openclaw/openclaw-secops
+/go.sum @openclaw/openclaw-secops
+/Makefile @openclaw/openclaw-secops
+/cmd/ @openclaw/openclaw-secops
+/internal/ @openclaw/openclaw-secops
+/scripts/ @openclaw/openclaw-secops
+/docs/releasing.md @openclaw/openclaw-secops
