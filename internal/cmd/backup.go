@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"os"
 	"sort"
 	"strconv"
@@ -276,7 +275,7 @@ func (c *BackupPushCmd) Run(ctx context.Context, flags *RootFlags) error {
 			}
 			snapshots = append(snapshots, snapshot)
 		default:
-			return fmt.Errorf("unsupported backup service %q (supported: all, admin, appscript, calendar, chat, classroom, contacts, drive, gmail, gmail-settings, groups, keep, tasks, workspace)", service)
+			return usagef("unsupported backup service %q (supported: all, admin, appscript, calendar, chat, classroom, contacts, drive, gmail, gmail-settings, groups, keep, tasks, workspace)", service)
 		}
 	}
 	result, err := backup.PushSnapshot(ctx, mergeBackupSnapshots(snapshots...), backupOpts)

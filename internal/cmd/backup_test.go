@@ -162,6 +162,22 @@ func TestExpandBackupServicesAllIncludesWorkspaceAdapters(t *testing.T) {
 	}
 }
 
+func TestBackupPushUnsupportedServiceIsUsageError(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(t.TempDir(), "config-home"))
+
+	err := Execute([]string{"backup", "push", "--repo", filepath.Join(t.TempDir(), "repo"), "--services", "nope"})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if got := ExitCode(err); got != 2 {
+		t.Fatalf("expected usage exit code 2, got %d (err=%v)", got, err)
+	}
+	if !strings.Contains(err.Error(), "unsupported backup service") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestGmailBackupMessageCacheRoundTrips(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	message := gmailBackupMessage{

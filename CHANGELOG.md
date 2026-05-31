@@ -11,6 +11,7 @@
 
 - Backup: make `backup init --dry-run` return a dry-run payload without writing config, creating a repo, or touching the configured remote.
 - Backup: make `backup init --no-push` initialize a local-only repo when no remote is explicitly provided instead of cloning the default remote.
+- Backup: return usage exit code 2 for unsupported `backup push --services` values instead of reporting them as generic runtime failures.
 - Backup: keep semantic manifest counts such as `contacts.connections` and `contacts.other` in `backup verify` and `backup export` results after shard verification.
 - Auth: return usage exit code 2 for unknown `--services` values instead of reporting them as generic runtime failures.
 - Auth: make `auth keep --dry-run` report the planned service-account paths without writing files.
