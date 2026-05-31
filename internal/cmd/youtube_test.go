@@ -16,6 +16,7 @@ import (
 )
 
 func TestYouTubeChannelsListWithAPIKey(t *testing.T) {
+	t.Setenv("GOG_ACCOUNT", "")
 	t.Setenv("GOG_YOUTUBE_API_KEY", "test-key")
 	origNew := newYouTubeWithAPIKey
 	t.Cleanup(func() { newYouTubeWithAPIKey = origNew })
@@ -298,6 +299,84 @@ func TestYouTubeVideosListWithAccountUsesOAuthService(t *testing.T) {
 	}
 	if gotAccount != "me@example.com" {
 		t.Fatalf("account = %q", gotAccount)
+	}
+}
+
+func TestYouTubeChannelReadCommandsWithAccountUseOAuthService(t *testing.T) {
+	tests := []struct {
+		name string
+		run  func(context.Context, *RootFlags) error
+		path string
+		key  string
+		want string
+	}{
+		{
+			name: "channels by id",
+			run: func(ctx context.Context, flags *RootFlags) error {
+				return runKong(t, &YouTubeChannelsListCmd{}, []string{"--id", "UC123", "--max", "1"}, ctx, flags)
+			},
+			path: "/youtube/v3/channels",
+			key:  "id",
+			want: "UC123",
+		},
+		{
+			name: "playlists by channel",
+			run: func(ctx context.Context, flags *RootFlags) error {
+				return runKong(t, &YouTubePlaylistsListCmd{}, []string{"--channel-id", "UC123", "--max", "1"}, ctx, flags)
+			},
+			path: "/youtube/v3/playlists",
+			key:  "channelId",
+			want: "UC123",
+		},
+		{
+			name: "activities by channel",
+			run: func(ctx context.Context, flags *RootFlags) error {
+				return runKong(t, &YouTubeActivitiesListCmd{}, []string{"--channel-id", "UC123", "--max", "1"}, ctx, flags)
+			},
+			path: "/youtube/v3/activities",
+			key:  "channelId",
+			want: "UC123",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			origOAuth := newYouTubeForAccount
+			origAPIKey := newYouTubeWithAPIKey
+			t.Cleanup(func() {
+				newYouTubeForAccount = origOAuth
+				newYouTubeWithAPIKey = origAPIKey
+			})
+
+			var gotAccount string
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != tt.path {
+					t.Fatalf("path = %s", r.URL.Path)
+				}
+				if got := r.URL.Query().Get(tt.key); got != tt.want {
+					t.Fatalf("%s = %q", tt.key, got)
+				}
+				_ = json.NewEncoder(w).Encode(map[string]any{"items": []map[string]any{}})
+			}))
+			defer srv.Close()
+
+			svc := newGoogleTestServiceWithEndpoint(t, srv.Client(), srv.URL+"/", youtube.NewService)
+			newYouTubeForAccount = func(_ context.Context, account string) (*youtube.Service, error) {
+				gotAccount = account
+				return svc, nil
+			}
+			newYouTubeWithAPIKey = func(context.Context, string) (*youtube.Service, error) {
+				t.Fatal("API key service should not be used when account is configured")
+				return nil, errors.New("unexpected API key service")
+			}
+
+			if err := tt.run(newQuietUIContext(t), &RootFlags{Account: "me@example.com"}); err != nil {
+				t.Fatalf("runKong: %v", err)
+			}
+			if gotAccount != "me@example.com" {
+				t.Fatalf("account = %q", gotAccount)
+			}
+		})
 	}
 }
 

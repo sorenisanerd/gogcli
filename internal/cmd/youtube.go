@@ -29,7 +29,7 @@ type YouTubeActivitiesCmd struct {
 }
 
 type YouTubeActivitiesListCmd struct {
-	ChannelID string `name:"channel-id" help:"Channel ID (use with API key)"`
+	ChannelID string `name:"channel-id" help:"Channel ID"`
 	Mine      bool   `name:"mine" help:"Use authenticated user's channel (requires -a account)"`
 	Max       int64  `name:"max" aliases:"limit" help:"Max results" default:"25"`
 	Page      string `name:"page" help:"Page token"`
@@ -56,7 +56,7 @@ func (c *YouTubeActivitiesListCmd) Run(ctx context.Context, flags *RootFlags) er
 		}
 		svc, err = getYouTubeServiceForAccount(ctx, account)
 	} else {
-		svc, err = getYouTubeServiceWithAPIKey(ctx)
+		svc, err = getYouTubeReadService(ctx, flags)
 	}
 	if err != nil {
 		return err
@@ -192,7 +192,7 @@ type YouTubePlaylistsCmd struct {
 }
 
 type YouTubePlaylistsListCmd struct {
-	ChannelID string `name:"channel-id" help:"Channel ID (use with API key)"`
+	ChannelID string `name:"channel-id" help:"Channel ID"`
 	Mine      bool   `name:"mine" help:"Use authenticated user (requires -a account)"`
 	Max       int64  `name:"max" aliases:"limit" help:"Max results" default:"25"`
 	Page      string `name:"page" help:"Page token"`
@@ -219,7 +219,7 @@ func (c *YouTubePlaylistsListCmd) Run(ctx context.Context, flags *RootFlags) err
 		}
 		svc, err = getYouTubeServiceForAccount(ctx, account)
 	} else {
-		svc, err = getYouTubeServiceWithAPIKey(ctx)
+		svc, err = getYouTubeReadService(ctx, flags)
 	}
 	if err != nil {
 		return err
@@ -352,7 +352,7 @@ type YouTubeChannelsCmd struct {
 }
 
 type YouTubeChannelsListCmd struct {
-	ID   string `name:"id" help:"Comma-separated channel IDs (use with API key)"`
+	ID   string `name:"id" help:"Comma-separated channel IDs"`
 	Mine bool   `name:"mine" help:"Use authenticated user (requires -a account)"`
 	Max  int64  `name:"max" aliases:"limit" help:"Max results" default:"25"`
 	Page string `name:"page" help:"Page token"`
@@ -379,7 +379,7 @@ func (c *YouTubeChannelsListCmd) Run(ctx context.Context, flags *RootFlags) erro
 		}
 		svc, err = getYouTubeServiceForAccount(ctx, account)
 	} else {
-		svc, err = getYouTubeServiceWithAPIKey(ctx)
+		svc, err = getYouTubeReadService(ctx, flags)
 	}
 	if err != nil {
 		return err
