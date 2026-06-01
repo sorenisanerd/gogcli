@@ -71,6 +71,9 @@ func gmailBulkLabelOp(ctx context.Context, flags *RootFlags, messageIDs []string
 	if len(idsFromArgs) == 0 && query == "" {
 		return usage("provide message IDs or --query")
 	}
+	if strings.TrimSpace(query) != "" && limit <= 0 {
+		return usage("--max must be > 0")
+	}
 
 	if err := dryRunExit(ctx, flags, dryRunOp, map[string]any{
 		"message_ids":    idsFromArgs,

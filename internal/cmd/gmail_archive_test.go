@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/steipete/gogcli/internal/outfmt"
@@ -154,5 +155,33 @@ func TestGmailArchiveCmd_DryRun_QueryMode_NoAccountRequired(t *testing.T) {
 	}
 	if ids := requestStringSlice(t, req, "message_ids"); len(ids) != 0 {
 		t.Fatalf("expected empty message_ids, got %v", ids)
+	}
+}
+
+func TestGmailBulkOps_QueryInvalidMaxFailsBeforeDryRun(t *testing.T) {
+	testCases := []struct {
+		name string
+		cmd  any
+		args []string
+	}{
+		{name: "archive zero", cmd: &GmailArchiveCmd{}, args: []string{"--query", "is:unread", "--max", "0"}},
+		{name: "archive negative", cmd: &GmailArchiveCmd{}, args: []string{"--query", "is:unread", "--max=-1"}},
+		{name: "trash zero", cmd: &GmailTrashMsgCmd{}, args: []string{"--query", "is:unread", "--max", "0"}},
+		{name: "read zero", cmd: &GmailReadCmd{}, args: []string{"--query", "is:unread", "--max", "0"}},
+		{name: "unread zero", cmd: &GmailUnreadCmd{}, args: []string{"--query", "is:unread", "--max", "0"}},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := outfmt.WithMode(context.Background(), outfmt.Mode{JSON: true})
+			out := captureStdout(t, func() {
+				err := runKong(t, tc.cmd, tc.args, ctx, &RootFlags{DryRun: true})
+				if err == nil || ExitCode(err) != 2 || !strings.Contains(err.Error(), "--max must be > 0") {
+					t.Fatalf("unexpected err: %v", err)
+				}
+			})
+			if strings.TrimSpace(out) != "" {
+				t.Fatalf("expected no dry-run output, got %q", out)
+			}
+		})
 	}
 }
