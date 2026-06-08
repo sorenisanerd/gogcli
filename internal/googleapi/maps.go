@@ -35,14 +35,6 @@ func WithMapsBaseURL(baseURL string) MapsClientOption {
 	}
 }
 
-func WithMapsHTTPClient(client *http.Client) MapsClientOption {
-	return func(c *MapsClient) {
-		if client != nil {
-			c.client = client
-		}
-	}
-}
-
 func NewMapsClient(apiKey string, opts ...MapsClientOption) *MapsClient {
 	c := &MapsClient{
 		apiKey:  strings.TrimSpace(apiKey),

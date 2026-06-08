@@ -50,14 +50,6 @@ func WithRoundTripper(rt http.RoundTripper) Option {
 	}
 }
 
-func WithHTTPClient(httpClient *http.Client) Option {
-	return func(c *Client) {
-		if httpClient != nil {
-			c.httpClient = httpClient
-		}
-	}
-}
-
 func WithNow(now func() time.Time) Option {
 	return func(c *Client) {
 		if now != nil {

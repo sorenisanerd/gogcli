@@ -537,16 +537,6 @@ func buildSlideyDryRunBatchUpdate(slideData []Slide) *slides.BatchUpdatePresenta
 	return &slides.BatchUpdatePresentationRequest{Requests: mainReqs}
 }
 
-// SlidesToAPIRequests is retained as a thin wrapper for any legacy caller.
-func SlidesToAPIRequests(in []Slide) ([]*slides.Request, map[int]string) {
-	reqs, _ := RenderSlides(in, NewAssetMap(), defaultPageGeometry())
-	ids := map[int]string{}
-	for i := range in {
-		ids[i] = fmt.Sprintf("slide_%d", i+1)
-	}
-	return reqs, ids
-}
-
 func defaultPageGeometry() LayoutGeometry {
 	// Standard 16:9 Slides page = 10in x 5.625in = 720pt x 405pt.
 	return LayoutGeometry{

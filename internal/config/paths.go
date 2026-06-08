@@ -296,19 +296,6 @@ func EnsureStateDir() (string, error) {
 	return dir, nil
 }
 
-func EnsureCacheDir() (string, error) {
-	dir, err := CacheDir()
-	if err != nil {
-		return "", err
-	}
-
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return "", fmt.Errorf("ensure cache dir: %w", err)
-	}
-
-	return dir, nil
-}
-
 // KeyringDir is where the keyring "file" backend stores encrypted entries.
 //
 // We keep this separate from the main config dir because the file backend creates

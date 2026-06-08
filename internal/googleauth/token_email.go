@@ -58,13 +58,3 @@ func IdentityForRefreshToken(ctx context.Context, client string, refreshToken st
 
 	return fetchUserIdentityWithURL(ctx, tok.AccessToken, userinfoURL)
 }
-
-// EmailForRefreshToken exchanges a refresh token and returns the authorized email address.
-func EmailForRefreshToken(ctx context.Context, client string, refreshToken string, scopes []string, timeout time.Duration) (string, error) {
-	identity, err := IdentityForRefreshToken(ctx, client, refreshToken, scopes, timeout)
-	if err != nil {
-		return "", err
-	}
-
-	return identity.Email, nil
-}
