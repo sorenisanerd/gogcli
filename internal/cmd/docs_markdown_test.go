@@ -523,6 +523,25 @@ func TestParseMarkdown_TableDoesNotSkipFollowingLine(t *testing.T) {
 	}
 }
 
+func TestParseMarkdown_TableNormalizesHTMLBreaksInCells(t *testing.T) {
+	input := "| Name | Notes |\n| --- | --- |\n| Alice<br>Bob<BR/>Carol<Br />Dana | Keep <break> literal |"
+	got := ParseMarkdown(input)
+	if len(got) != 1 || got[0].Type != MDTable {
+		t.Fatalf("ParseMarkdown() = %#v, want one table", got)
+	}
+	want := []string{"Alice\nBob\nCarol\nDana", "Keep <break> literal"}
+	if rows := got[0].TableCells; len(rows) != 2 || len(rows[1]) != 2 || rows[1][0] != want[0] || rows[1][1] != want[1] {
+		t.Fatalf("table rows = %#v, want second row %#v", rows, want)
+	}
+}
+
+func TestParseMarkdown_NonTableHTMLBreakUnchanged(t *testing.T) {
+	got := ParseMarkdown("Alice<br>Bob")
+	if len(got) != 1 || got[0].Type != MDParagraph || got[0].Content != "Alice<br>Bob" {
+		t.Fatalf("ParseMarkdown() = %#v, want unchanged paragraph", got)
+	}
+}
+
 func TestIsTableSeparator_EmptyPipeRowRejected(t *testing.T) {
 	// Regression for #609: a row of empty pipe cells (e.g. an empty markdown
 	// table header) must not be classified as a separator line. Otherwise the

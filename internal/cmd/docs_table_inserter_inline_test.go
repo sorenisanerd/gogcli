@@ -77,6 +77,31 @@ func TestBuildTableCellRequests_AppliesInlineItalicAndCode(t *testing.T) {
 	}
 }
 
+func TestBuildTableCellRequests_TableBreaksPreserveInlineStyleRanges(t *testing.T) {
+	rows := parseTableRow("| Alice<br>**Bob** |")
+	if len(rows) != 1 {
+		t.Fatalf("parseTableRow() = %#v, want one cell", rows)
+	}
+
+	reqs, inserted := buildTableCellRequests(rows[0], 100, false, "")
+	if inserted != utf16Len("Alice\nBob") {
+		t.Fatalf("inserted = %d, want %d", inserted, utf16Len("Alice\nBob"))
+	}
+	if len(reqs) != 2 {
+		t.Fatalf("expected InsertText + UpdateTextStyle, got %d: %#v", len(reqs), reqs)
+	}
+	if got := reqs[0].InsertText; got == nil || got.Text != "Alice\nBob" {
+		t.Fatalf("InsertText = %#v, want text %q", got, "Alice\nBob")
+	}
+	style := reqs[1].UpdateTextStyle
+	if style == nil || style.TextStyle == nil || !style.TextStyle.Bold {
+		t.Fatalf("expected bold UpdateTextStyle, got %#v", reqs[1])
+	}
+	if style.Range == nil || style.Range.StartIndex != 106 || style.Range.EndIndex != 109 {
+		t.Fatalf("style range = %#v, want [106,109]", style.Range)
+	}
+}
+
 func TestBuildTableCellRequests_HeaderRowAppliesBoldOverWholeCell(t *testing.T) {
 	reqs, inserted := buildTableCellRequests("Field", 10, true, "")
 

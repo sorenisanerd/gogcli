@@ -253,7 +253,10 @@ func ParseMarkdown(text string) []MarkdownElement {
 	return elements
 }
 
-var markdownNumberedListRE = regexp.MustCompile(`^(\d+)\.\s+(.+)`)
+var (
+	markdownNumberedListRE = regexp.MustCompile(`^(\d+)\.\s+(.+)`)
+	markdownTableBreakRE   = regexp.MustCompile(`(?i)<br\s*/?>`)
+)
 
 func parseMarkdownListItem(line string) (MarkdownElementType, string, int, bool) {
 	indent, rest := markdownListIndentColumns(line)
@@ -396,6 +399,7 @@ func parseTableRow(line string) []string {
 	cells := make([]string, 0, len(parts))
 	for _, part := range parts {
 		cell := strings.TrimSpace(part)
+		cell = markdownTableBreakRE.ReplaceAllString(cell, "\n")
 		cells = append(cells, cell)
 	}
 
