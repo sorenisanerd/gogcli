@@ -2,35 +2,13 @@ package cmd
 
 import (
 	"context"
-	"os"
-	"os/exec"
-	"runtime"
 	"strings"
 
 	"google.golang.org/api/meet/v2"
 
-	"github.com/steipete/gogcli/internal/googleapi"
 	"github.com/steipete/gogcli/internal/outfmt"
 	"github.com/steipete/gogcli/internal/ui"
 )
-
-// openMeetBrowser opens the meeting URL in the default browser.
-var openMeetBrowser = func(url string) error {
-	var cmd *exec.Cmd
-
-	switch runtime.GOOS {
-	case "darwin":
-		cmd = exec.Command("open", url) //nolint:gosec // executable is fixed; arg is meeting URL
-	case literalWindows:
-		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url) //nolint:gosec // executable is fixed; arg is meeting URL
-	default:
-		cmd = exec.Command("xdg-open", url) //nolint:gosec // executable is fixed; arg is meeting URL
-	}
-
-	return cmd.Start()
-}
-
-var newMeetService = googleapi.NewMeet
 
 type MeetCmd struct {
 	Create       MeetCreateCmd       `cmd:"" name:"create" aliases:"new" help:"Create a meeting space"`
@@ -84,7 +62,7 @@ func (c *MeetCreateCmd) Run(ctx context.Context, flags *RootFlags) error {
 	}
 
 	if outfmt.IsJSON(ctx) {
-		if err := outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		if err := outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"created":      true,
 			"name":         created.Name,
 			"meeting_uri":  created.MeetingUri,
@@ -94,13 +72,13 @@ func (c *MeetCreateCmd) Run(ctx context.Context, flags *RootFlags) error {
 			return err
 		}
 
-		return openMeetingIfRequested(c.Open, created.MeetingUri)
+		return openMeetingIfRequested(ctx, c.Open, created.MeetingUri)
 	}
 
 	u := ui.FromContext(ctx)
 	printMeetSpace(u, created)
 
-	return openMeetingIfRequested(c.Open, created.MeetingUri)
+	return openMeetingIfRequested(ctx, c.Open, created.MeetingUri)
 }
 
 // MeetGetCmd gets a meeting space by meeting code.
@@ -125,7 +103,7 @@ func (c *MeetGetCmd) Run(ctx context.Context, flags *RootFlags) error {
 	}
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"name":         space.Name,
 			"meeting_uri":  space.MeetingUri,
 			"meeting_code": space.MeetingCode,
@@ -180,12 +158,12 @@ func resolveMeetSpace(ctx context.Context, svc *meet.Service, input string) (*me
 	return svc.Spaces.Get(normalizeMeetSpaceName(input)).Context(ctx).Do()
 }
 
-func openMeetingIfRequested(shouldOpen bool, meetingURI string) error {
+func openMeetingIfRequested(ctx context.Context, shouldOpen bool, meetingURI string) error {
 	if !shouldOpen || strings.TrimSpace(meetingURI) == "" {
 		return nil
 	}
 
-	return openMeetBrowser(meetingURI)
+	return openURL(ctx, meetingURI)
 }
 
 func parseMeetAccessType(s string) (string, error) {

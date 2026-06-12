@@ -10,13 +10,12 @@ import (
 
 	"google.golang.org/api/meet/v2"
 	"google.golang.org/api/option"
+
+	"github.com/steipete/gogcli/internal/app"
 )
 
-func newTestMeetService(t *testing.T, handler http.Handler) {
+func newTestMeetService(t *testing.T, handler http.Handler) *meet.Service {
 	t.Helper()
-
-	origNew := newMeetService
-	t.Cleanup(func() { newMeetService = origNew })
 
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)
@@ -30,7 +29,16 @@ func newTestMeetService(t *testing.T, handler http.Handler) {
 		t.Fatalf("NewService: %v", err)
 	}
 
-	newMeetService = func(context.Context, string) (*meet.Service, error) { return svc, nil }
+	return svc
+}
+
+func executeWithMeetTestService(t *testing.T, args []string, svc *meet.Service) executeTestResult {
+	t.Helper()
+	return executeWithTestRuntime(t, args, &app.Runtime{Services: app.Services{
+		Meet: func(context.Context, string) (*meet.Service, error) {
+			return svc, nil
+		},
+	}})
 }
 
 func meetSpaceResponse() map[string]any {
@@ -46,7 +54,7 @@ func meetSpaceResponse() map[string]any {
 }
 
 func TestExecute_MeetCreate_JSON(t *testing.T) {
-	newTestMeetService(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	svc := newTestMeetService(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !(r.URL.Path == "/v2/spaces" && r.Method == http.MethodPost) {
 			http.NotFound(w, r)
 			return
@@ -56,13 +64,11 @@ func TestExecute_MeetCreate_JSON(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(meetSpaceResponse())
 	}))
 
-	out := captureStdout(t, func() {
-		_ = captureStderr(t, func() {
-			if err := Execute([]string{"--json", "--account", "a@b.com", "meet", "create"}); err != nil {
-				t.Fatalf("Execute: %v", err)
-			}
-		})
-	})
+	result := executeWithMeetTestService(t, []string{"--json", "--account", "a@b.com", "meet", "create"}, svc)
+	if result.err != nil {
+		t.Fatalf("Execute: %v, stderr=%q", result.err, result.stderr)
+	}
+	out := result.stdout
 
 	var parsed struct {
 		Created     bool   `json:"created"`
@@ -88,7 +94,7 @@ func TestExecute_MeetCreate_JSON(t *testing.T) {
 }
 
 func TestExecute_MeetCreate_Text(t *testing.T) {
-	newTestMeetService(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	svc := newTestMeetService(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !(r.URL.Path == "/v2/spaces" && r.Method == http.MethodPost) {
 			http.NotFound(w, r)
 			return
@@ -98,13 +104,11 @@ func TestExecute_MeetCreate_Text(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(meetSpaceResponse())
 	}))
 
-	out := captureStdout(t, func() {
-		_ = captureStderr(t, func() {
-			if err := Execute([]string{"--plain", "--account", "a@b.com", "meet", "create"}); err != nil {
-				t.Fatalf("Execute: %v", err)
-			}
-		})
-	})
+	result := executeWithMeetTestService(t, []string{"--plain", "--account", "a@b.com", "meet", "create"}, svc)
+	if result.err != nil {
+		t.Fatalf("Execute: %v, stderr=%q", result.err, result.stderr)
+	}
+	out := result.stdout
 
 	if !strings.Contains(out, "meeting_code\tabc-defg-hij") {
 		t.Fatalf("expected meeting_code in output, got: %q", out)
@@ -120,19 +124,16 @@ func TestExecute_MeetCreate_Text(t *testing.T) {
 }
 
 func TestExecute_MeetCreate_DryRun(t *testing.T) {
-	newTestMeetService(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	svc := newTestMeetService(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		t.Fatal("should not call API in dry-run mode")
 		http.Error(w, "unexpected", http.StatusInternalServerError)
 	}))
 
-	out := captureStdout(t, func() {
-		_ = captureStderr(t, func() {
-			err := Execute([]string{"--json", "--dry-run", "--account", "a@b.com", "meet", "create"})
-			if err != nil && ExitCode(err) != 0 {
-				t.Fatalf("Execute: %v", err)
-			}
-		})
-	})
+	result := executeWithMeetTestService(t, []string{"--json", "--dry-run", "--account", "a@b.com", "meet", "create"}, svc)
+	if result.err != nil && ExitCode(result.err) != 0 {
+		t.Fatalf("Execute: %v, stderr=%q", result.err, result.stderr)
+	}
+	out := result.stdout
 
 	var parsed struct {
 		DryRun bool   `json:"dry_run"`
@@ -153,7 +154,7 @@ func TestExecute_MeetCreate_DryRun(t *testing.T) {
 }
 
 func TestExecute_MeetGet_JSON(t *testing.T) {
-	newTestMeetService(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	svc := newTestMeetService(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !(r.URL.Path == "/v2/spaces/abc-defg-hij" && r.Method == http.MethodGet) {
 			http.NotFound(w, r)
 			return
@@ -163,13 +164,11 @@ func TestExecute_MeetGet_JSON(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(meetSpaceResponse())
 	}))
 
-	out := captureStdout(t, func() {
-		_ = captureStderr(t, func() {
-			if err := Execute([]string{"--json", "--account", "a@b.com", "meet", "get", "abc-defg-hij"}); err != nil {
-				t.Fatalf("Execute: %v", err)
-			}
-		})
-	})
+	result := executeWithMeetTestService(t, []string{"--json", "--account", "a@b.com", "meet", "get", "abc-defg-hij"}, svc)
+	if result.err != nil {
+		t.Fatalf("Execute: %v, stderr=%q", result.err, result.stderr)
+	}
+	out := result.stdout
 
 	var parsed struct {
 		MeetingCode string `json:"meeting_code"`
@@ -185,7 +184,7 @@ func TestExecute_MeetGet_JSON(t *testing.T) {
 }
 
 func TestExecute_MeetHistory_JSON(t *testing.T) {
-	newTestMeetService(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	svc := newTestMeetService(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.URL.Path == "/v2/spaces/abc-defg-hij" && r.Method == http.MethodGet:
 			w.Header().Set("Content-Type", "application/json")
@@ -211,13 +210,11 @@ func TestExecute_MeetHistory_JSON(t *testing.T) {
 		}
 	}))
 
-	out := captureStdout(t, func() {
-		_ = captureStderr(t, func() {
-			if err := Execute([]string{"--json", "--account", "a@b.com", "meet", "history", "abc-defg-hij"}); err != nil {
-				t.Fatalf("Execute: %v", err)
-			}
-		})
-	})
+	result := executeWithMeetTestService(t, []string{"--json", "--account", "a@b.com", "meet", "history", "abc-defg-hij"}, svc)
+	if result.err != nil {
+		t.Fatalf("Execute: %v, stderr=%q", result.err, result.stderr)
+	}
+	out := result.stdout
 
 	var parsed struct {
 		MeetingCode string `json:"meeting_code"`
@@ -240,7 +237,7 @@ func TestExecute_MeetHistory_JSON(t *testing.T) {
 }
 
 func TestExecute_MeetParticipants_JSON(t *testing.T) {
-	newTestMeetService(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	svc := newTestMeetService(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.URL.Path == "/v2/spaces/abc-defg-hij" && r.Method == http.MethodGet:
 			w.Header().Set("Content-Type", "application/json")
@@ -281,13 +278,11 @@ func TestExecute_MeetParticipants_JSON(t *testing.T) {
 		}
 	}))
 
-	out := captureStdout(t, func() {
-		_ = captureStderr(t, func() {
-			if err := Execute([]string{"--json", "--account", "a@b.com", "meet", "participants", "abc-defg-hij"}); err != nil {
-				t.Fatalf("Execute: %v", err)
-			}
-		})
-	})
+	result := executeWithMeetTestService(t, []string{"--json", "--account", "a@b.com", "meet", "participants", "abc-defg-hij"}, svc)
+	if result.err != nil {
+		t.Fatalf("Execute: %v, stderr=%q", result.err, result.stderr)
+	}
+	out := result.stdout
 
 	var parsed struct {
 		MeetingCode  string `json:"meeting_code"`

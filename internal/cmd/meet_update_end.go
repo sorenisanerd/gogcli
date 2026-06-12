@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"os"
 	"strings"
 
 	"google.golang.org/api/meet/v2"
@@ -78,7 +77,7 @@ func (c *MeetUpdateCmd) Run(ctx context.Context, flags *RootFlags) error {
 	}
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"updated":      true,
 			"name":         updated.Name,
 			"meeting_uri":  updated.MeetingUri,
@@ -127,7 +126,7 @@ func (c *MeetEndCmd) Run(ctx context.Context, flags *RootFlags) error {
 	}
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"ended":        true,
 			"meeting_code": c.MeetingCode,
 		})

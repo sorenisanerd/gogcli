@@ -18,6 +18,7 @@ import (
 	formsapi "google.golang.org/api/forms/v1"
 	"google.golang.org/api/gmail/v1"
 	keepapi "google.golang.org/api/keep/v1"
+	"google.golang.org/api/meet/v2"
 	"google.golang.org/api/people/v1"
 	searchconsoleapi "google.golang.org/api/searchconsole/v1"
 	"google.golang.org/api/sheets/v4"
@@ -53,6 +54,7 @@ func newDefaultRuntime() *app.Runtime {
 			Forms:           googleapi.NewForms,
 			Gmail:           googleapi.NewGmail,
 			Keep:            newKeepServiceWithSA,
+			Meet:            googleapi.NewMeet,
 			PeopleContacts:  googleapi.NewPeopleContacts,
 			PeopleDirectory: googleapi.NewPeopleDirectory,
 			PeopleOther:     googleapi.NewPeopleOtherContacts,
@@ -126,6 +128,9 @@ func normalizedRuntime(runtime *app.Runtime) *app.Runtime {
 	}
 	if normalized.Services.Keep == nil {
 		normalized.Services.Keep = defaults.Services.Keep
+	}
+	if normalized.Services.Meet == nil {
+		normalized.Services.Meet = defaults.Services.Meet
 	}
 	if normalized.Services.PeopleContacts == nil {
 		normalized.Services.PeopleContacts = defaults.Services.PeopleContacts
@@ -321,6 +326,13 @@ func gmailServiceFactory(ctx context.Context) app.GmailServiceFactory {
 		return runtime.Services.Gmail
 	}
 	return googleapi.NewGmail
+}
+
+func meetService(ctx context.Context, account string) (*meet.Service, error) {
+	if runtime, ok := app.FromContext(ctx); ok && runtime.Services.Meet != nil {
+		return runtime.Services.Meet(ctx, account)
+	}
+	return googleapi.NewMeet(ctx, account)
 }
 
 func peopleContactsService(ctx context.Context, account string) (*people.Service, error) {

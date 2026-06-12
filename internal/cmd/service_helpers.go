@@ -42,7 +42,7 @@ func requireClassroomService(ctx context.Context, flags *RootFlags) (string, *cl
 }
 
 func requireMeetService(ctx context.Context, flags *RootFlags) (string, *meet.Service, error) {
-	return requireGoogleService(ctx, flags, newMeetService)
+	return requireGoogleService(ctx, flags, meetService)
 }
 
 func requireSheetsService(ctx context.Context, flags *RootFlags) (string, *sheets.Service, error) {
