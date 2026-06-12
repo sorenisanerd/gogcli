@@ -89,19 +89,13 @@ func (c *ClassroomInvitationsListCmd) Run(ctx context.Context, flags *RootFlags)
 		return failEmptyExit(c.FailEmpty)
 	}
 
-	w, flush := tableWriter(ctx)
-	defer flush()
-	fmt.Fprintln(w, "ID\tCOURSE_ID\tUSER_ID\tROLE")
-	for _, inv := range invitations {
-		if inv == nil {
-			continue
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
-			sanitizeTab(inv.Id),
-			sanitizeTab(inv.CourseId),
-			sanitizeTab(inv.UserId),
-			sanitizeTab(inv.Role),
-		)
+	if err := outfmt.WriteTable(
+		ctx,
+		stdoutWriter(ctx),
+		compactClassroomRows(invitations),
+		classroomInvitationColumns(),
+	); err != nil {
+		return err
 	}
 	printNextPageHint(u, nextPageToken)
 	return nil

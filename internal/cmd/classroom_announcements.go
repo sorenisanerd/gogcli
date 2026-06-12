@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"io"
 	"strings"
 
 	"google.golang.org/api/classroom/v1"
@@ -72,21 +71,16 @@ func (c *ClassroomAnnouncementsListCmd) Run(ctx context.Context, flags *RootFlag
 		return err
 	}
 
-	return writeClassroomPagedList(ctx, "announcements", announcements, nextPageToken, "No announcements", c.FailEmpty, false, func(w io.Writer) {
-		fmt.Fprintln(w, "ID\tSTATE\tTEXT\tSCHEDULED\tUPDATED")
-		for _, ann := range announcements {
-			if ann == nil {
-				continue
-			}
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
-				sanitizeTab(ann.Id),
-				sanitizeTab(ann.State),
-				sanitizeTab(truncateClassroomText(ann.Text, 50)),
-				sanitizeTab(ann.ScheduledTime),
-				sanitizeTab(ann.UpdateTime),
-			)
-		}
-	})
+	return writeClassroomPagedList(
+		ctx,
+		"announcements",
+		announcements,
+		nextPageToken,
+		"No announcements",
+		c.FailEmpty,
+		false,
+		classroomAnnouncementColumns(),
+	)
 }
 
 type ClassroomAnnouncementsGetCmd struct {

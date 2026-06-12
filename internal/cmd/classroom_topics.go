@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"io"
 	"strings"
 
 	"google.golang.org/api/classroom/v1"
@@ -59,19 +58,16 @@ func (c *ClassroomTopicsListCmd) Run(ctx context.Context, flags *RootFlags) erro
 		return err
 	}
 
-	return writeClassroomPagedList(ctx, "topics", topics, nextPageToken, "No topics", c.FailEmpty, false, func(w io.Writer) {
-		fmt.Fprintln(w, "TOPIC_ID\tNAME\tUPDATED")
-		for _, topic := range topics {
-			if topic == nil {
-				continue
-			}
-			fmt.Fprintf(w, "%s\t%s\t%s\n",
-				sanitizeTab(topic.TopicId),
-				sanitizeTab(topic.Name),
-				sanitizeTab(topic.UpdateTime),
-			)
-		}
-	})
+	return writeClassroomPagedList(
+		ctx,
+		"topics",
+		topics,
+		nextPageToken,
+		"No topics",
+		c.FailEmpty,
+		false,
+		classroomTopicColumns(),
+	)
 }
 
 type ClassroomTopicsGetCmd struct {

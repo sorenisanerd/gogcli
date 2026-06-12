@@ -84,18 +84,13 @@ func (c *ClassroomGuardiansListCmd) Run(ctx context.Context, flags *RootFlags) e
 		return failEmptyExit(c.FailEmpty)
 	}
 
-	w, flush := tableWriter(ctx)
-	defer flush()
-	fmt.Fprintln(w, "GUARDIAN_ID\tEMAIL\tNAME")
-	for _, guardian := range guardians {
-		if guardian == nil {
-			continue
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\n",
-			sanitizeTab(guardian.GuardianId),
-			sanitizeTab(profileEmail(guardian.GuardianProfile)),
-			sanitizeTab(profileName(guardian.GuardianProfile)),
-		)
+	if err := outfmt.WriteTable(
+		ctx,
+		stdoutWriter(ctx),
+		compactClassroomRows(guardians),
+		classroomGuardianColumns(),
+	); err != nil {
+		return err
 	}
 	printNextPageHint(u, nextPageToken)
 	return nil
@@ -267,19 +262,13 @@ func (c *ClassroomGuardianInvitesListCmd) Run(ctx context.Context, flags *RootFl
 		return failEmptyExit(c.FailEmpty)
 	}
 
-	w, flush := tableWriter(ctx)
-	defer flush()
-	fmt.Fprintln(w, "INVITATION_ID\tEMAIL\tSTATE\tCREATED")
-	for _, inv := range invitations {
-		if inv == nil {
-			continue
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
-			sanitizeTab(inv.InvitationId),
-			sanitizeTab(inv.InvitedEmailAddress),
-			sanitizeTab(inv.State),
-			sanitizeTab(inv.CreationTime),
-		)
+	if err := outfmt.WriteTable(
+		ctx,
+		stdoutWriter(ctx),
+		compactClassroomRows(invitations),
+		classroomGuardianInvitationColumns(),
+	); err != nil {
+		return err
 	}
 	printNextPageHint(u, nextPageToken)
 	return nil

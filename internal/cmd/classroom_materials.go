@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"io"
 	"strings"
 
 	"google.golang.org/api/classroom/v1"
@@ -110,20 +109,16 @@ func (c *ClassroomMaterialsListCmd) Run(ctx context.Context, flags *RootFlags) e
 	}
 	materials = nonNilClassroomItems(materials)
 
-	return writeClassroomPagedList(ctx, "materials", materials, nextPageToken, "No materials", c.FailEmpty, true, func(w io.Writer) {
-		fmt.Fprintln(w, "ID\tTITLE\tSTATE\tUPDATED")
-		for _, material := range materials {
-			if material == nil {
-				continue
-			}
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
-				sanitizeTab(material.Id),
-				sanitizeTab(material.Title),
-				sanitizeTab(material.State),
-				sanitizeTab(material.UpdateTime),
-			)
-		}
-	})
+	return writeClassroomPagedList(
+		ctx,
+		"materials",
+		materials,
+		nextPageToken,
+		"No materials",
+		c.FailEmpty,
+		true,
+		classroomMaterialColumns(),
+	)
 }
 
 type ClassroomMaterialsGetCmd struct {

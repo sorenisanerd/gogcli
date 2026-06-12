@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"google.golang.org/api/classroom/v1"
@@ -112,22 +111,13 @@ func (c *ClassroomSubmissionsListCmd) Run(ctx context.Context, flags *RootFlags)
 		return failEmptyExit(c.FailEmpty)
 	}
 
-	w, flush := tableWriter(ctx)
-	defer flush()
-	fmt.Fprintln(w, "ID\tUSER_ID\tSTATE\tLATE\tDRAFT\tASSIGNED\tUPDATED")
-	for _, sub := range submissions {
-		if sub == nil {
-			continue
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%t\t%s\t%s\t%s\n",
-			sanitizeTab(sub.Id),
-			sanitizeTab(sub.UserId),
-			sanitizeTab(sub.State),
-			sub.Late,
-			formatFloatValue(sub.DraftGrade),
-			formatFloatValue(sub.AssignedGrade),
-			sanitizeTab(sub.UpdateTime),
-		)
+	if err := outfmt.WriteTable(
+		ctx,
+		stdoutWriter(ctx),
+		compactClassroomRows(submissions),
+		classroomSubmissionColumns(),
+	); err != nil {
+		return err
 	}
 	printNextPageHint(u, nextPageToken)
 	return nil

@@ -98,20 +98,13 @@ func (c *ClassroomCoursesListCmd) Run(ctx context.Context, flags *RootFlags) err
 		return failEmptyExit(c.FailEmpty)
 	}
 
-	w, flush := tableWriter(ctx)
-	defer flush()
-	fmt.Fprintln(w, "ID\tNAME\tSECTION\tSTATE\tOWNER")
-	for _, course := range courses {
-		if course == nil {
-			continue
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
-			sanitizeTab(course.Id),
-			sanitizeTab(course.Name),
-			sanitizeTab(course.Section),
-			sanitizeTab(course.CourseState),
-			sanitizeTab(course.OwnerId),
-		)
+	if err := outfmt.WriteTable(
+		ctx,
+		stdoutWriter(ctx),
+		compactClassroomRows(courses),
+		classroomCourseColumns(),
+	); err != nil {
+		return err
 	}
 	printNextPageHint(u, nextPageToken)
 	return nil

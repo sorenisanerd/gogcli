@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"io"
 
 	"github.com/steipete/gogcli/internal/outfmt"
 	"github.com/steipete/gogcli/internal/ui"
@@ -19,6 +18,16 @@ func nonNilClassroomItems[T any](items []*T) []*T {
 	return items
 }
 
+func compactClassroomRows[T any](items []*T) []*T {
+	rows := make([]*T, 0, len(items))
+	for _, item := range items {
+		if item != nil {
+			rows = append(rows, item)
+		}
+	}
+	return rows
+}
+
 func writeClassroomPagedList[T any](
 	ctx context.Context,
 	jsonKey string,
@@ -27,7 +36,7 @@ func writeClassroomPagedList[T any](
 	emptyMessage string,
 	failEmpty bool,
 	hintOnEmpty bool,
-	printTable func(io.Writer),
+	columns []outfmt.Column[*T],
 ) error {
 	items = nonNilClassroomItems(items)
 	if outfmt.IsJSON(ctx) {
@@ -52,9 +61,9 @@ func writeClassroomPagedList[T any](
 		return failEmptyExit(failEmpty)
 	}
 
-	w, flush := tableWriter(ctx)
-	defer flush()
-	printTable(w)
+	if err := outfmt.WriteTable(ctx, stdoutWriter(ctx), compactClassroomRows(items), columns); err != nil {
+		return err
+	}
 	printNextPageHint(u, nextPageToken)
 	return nil
 }

@@ -81,18 +81,13 @@ func (c *ClassroomStudentsListCmd) Run(ctx context.Context, flags *RootFlags) er
 		return failEmptyExit(c.FailEmpty)
 	}
 
-	w, flush := tableWriter(ctx)
-	defer flush()
-	fmt.Fprintln(w, "USER_ID\tEMAIL\tNAME")
-	for _, student := range students {
-		if student == nil {
-			continue
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\n",
-			sanitizeTab(student.UserId),
-			sanitizeTab(profileEmail(student.Profile)),
-			sanitizeTab(profileName(student.Profile)),
-		)
+	if err := outfmt.WriteTable(
+		ctx,
+		stdoutWriter(ctx),
+		compactClassroomRows(students),
+		classroomStudentColumns(),
+	); err != nil {
+		return err
 	}
 	printNextPageHint(u, nextPageToken)
 	return nil
@@ -309,18 +304,13 @@ func (c *ClassroomTeachersListCmd) Run(ctx context.Context, flags *RootFlags) er
 		return failEmptyExit(c.FailEmpty)
 	}
 
-	w, flush := tableWriter(ctx)
-	defer flush()
-	fmt.Fprintln(w, "USER_ID\tEMAIL\tNAME")
-	for _, teacher := range teachers {
-		if teacher == nil {
-			continue
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\n",
-			sanitizeTab(teacher.UserId),
-			sanitizeTab(profileEmail(teacher.Profile)),
-			sanitizeTab(profileName(teacher.Profile)),
-		)
+	if err := outfmt.WriteTable(
+		ctx,
+		stdoutWriter(ctx),
+		compactClassroomRows(teachers),
+		classroomTeacherColumns(),
+	); err != nil {
+		return err
 	}
 	printNextPageHint(u, nextPageToken)
 	return nil
@@ -570,35 +560,20 @@ func (c *ClassroomRosterCmd) Run(ctx context.Context, flags *RootFlags) error {
 		return failEmptyExit(c.FailEmpty)
 	}
 
-	w, flush := tableWriter(ctx)
-	defer flush()
-	fmt.Fprintln(w, "ROLE\tUSER_ID\tEMAIL\tNAME")
+	if err := outfmt.WriteTable(
+		ctx,
+		stdoutWriter(ctx),
+		classroomRosterRows(teachers, students),
+		classroomRosterColumns(),
+	); err != nil {
+		return err
+	}
 	if includeTeachers {
-		for _, teacher := range teachers {
-			if teacher == nil {
-				continue
-			}
-			fmt.Fprintf(w, "teacher\t%s\t%s\t%s\n",
-				sanitizeTab(teacher.UserId),
-				sanitizeTab(profileEmail(teacher.Profile)),
-				sanitizeTab(profileName(teacher.Profile)),
-			)
-		}
 		if teachersNextPageToken != "" {
 			u.Err().Linef("# Next teachers page: --page %s", teachersNextPageToken)
 		}
 	}
 	if includeStudents {
-		for _, student := range students {
-			if student == nil {
-				continue
-			}
-			fmt.Fprintf(w, "student\t%s\t%s\t%s\n",
-				sanitizeTab(student.UserId),
-				sanitizeTab(profileEmail(student.Profile)),
-				sanitizeTab(profileName(student.Profile)),
-			)
-		}
 		if studentsNextPageToken != "" {
 			u.Err().Linef("# Next students page: --page %s", studentsNextPageToken)
 		}

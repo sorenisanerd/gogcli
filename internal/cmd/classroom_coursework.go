@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"io"
 	"strings"
 
 	"google.golang.org/api/classroom/v1"
@@ -111,22 +110,16 @@ func (c *ClassroomCourseworkListCmd) Run(ctx context.Context, flags *RootFlags) 
 	}
 	coursework = nonNilClassroomItems(coursework)
 
-	return writeClassroomPagedList(ctx, "coursework", coursework, nextPageToken, "No coursework", c.FailEmpty, true, func(w io.Writer) {
-		fmt.Fprintln(w, "ID\tTITLE\tSTATE\tDUE\tTYPE\tMAX_POINTS")
-		for _, work := range coursework {
-			if work == nil {
-				continue
-			}
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
-				sanitizeTab(work.Id),
-				sanitizeTab(work.Title),
-				sanitizeTab(work.State),
-				sanitizeTab(formatClassroomDue(work.DueDate, work.DueTime)),
-				sanitizeTab(work.WorkType),
-				formatFloatValue(work.MaxPoints),
-			)
-		}
-	})
+	return writeClassroomPagedList(
+		ctx,
+		"coursework",
+		coursework,
+		nextPageToken,
+		"No coursework",
+		c.FailEmpty,
+		true,
+		classroomCourseworkColumns(),
+	)
 }
 
 type ClassroomCourseworkGetCmd struct {
