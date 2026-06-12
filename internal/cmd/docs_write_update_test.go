@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -12,8 +14,7 @@ import (
 )
 
 func TestDocsWriteUpdate_JSON(t *testing.T) {
-	origDocs := newDocsService
-	t.Cleanup(func() { newDocsService = origDocs })
+	t.Parallel()
 
 	var batchRequests [][]*docs.Request
 
@@ -48,10 +49,9 @@ func TestDocsWriteUpdate_JSON(t *testing.T) {
 		}
 	}))
 	defer cleanup()
-	newDocsService = func(context.Context, string) (*docs.Service, error) { return docSvc, nil }
 
 	flags := &RootFlags{Account: "a@b.com"}
-	ctx := newDocsJSONContext(t)
+	ctx := withDocsTestService(newCmdRuntimeJSONOutputContext(t, io.Discard, io.Discard), docSvc)
 
 	if err := runKong(t, &DocsWriteCmd{}, []string{"doc1", "--text", "hello"}, ctx, flags); err != nil {
 		t.Fatalf("write: %v", err)
@@ -110,8 +110,7 @@ func TestDocsWriteUpdate_JSON(t *testing.T) {
 }
 
 func TestDocsUpdate_MarkdownWithTab(t *testing.T) {
-	origDocs := newDocsService
-	t.Cleanup(func() { newDocsService = origDocs })
+	t.Parallel()
 
 	var batchRequests [][]*docs.Request
 	var includeTabsCalls int
@@ -141,10 +140,9 @@ func TestDocsUpdate_MarkdownWithTab(t *testing.T) {
 		}
 	}))
 	defer cleanup()
-	newDocsService = func(context.Context, string) (*docs.Service, error) { return docSvc, nil }
 
 	flags := &RootFlags{Account: "a@b.com"}
-	ctx := newDocsJSONContext(t)
+	ctx := withDocsTestService(newCmdRuntimeJSONOutputContext(t, io.Discard, io.Discard), docSvc)
 
 	markdown := "## Heading\n\n**bold** and [link](https://example.com)\n"
 	if err := runKong(t, &DocsUpdateCmd{}, []string{
@@ -192,8 +190,7 @@ func TestDocsUpdate_MarkdownWithTab(t *testing.T) {
 }
 
 func TestDocsUpdate_MarkdownRewritesExplicitHeadingAnchorLinks(t *testing.T) {
-	origDocs := newDocsService
-	t.Cleanup(func() { newDocsService = origDocs })
+	t.Parallel()
 
 	var batchRequests [][]*docs.Request
 	gets := 0
@@ -229,10 +226,9 @@ func TestDocsUpdate_MarkdownRewritesExplicitHeadingAnchorLinks(t *testing.T) {
 		}
 	}))
 	defer cleanup()
-	newDocsService = func(context.Context, string) (*docs.Service, error) { return docSvc, nil }
 
 	flags := &RootFlags{Account: "a@b.com"}
-	ctx := newDocsJSONContext(t)
+	ctx := withDocsTestService(newCmdRuntimeJSONOutputContext(t, io.Discard, io.Discard), docSvc)
 	markdown := "# Files {#attachments}\n\n[Jump](#attachments)\n"
 	if err := runKong(t, &DocsUpdateCmd{}, []string{"doc1", "--text", markdown, "--markdown"}, ctx, flags); err != nil {
 		t.Fatalf("update markdown: %v", err)
@@ -252,8 +248,7 @@ func TestDocsUpdate_MarkdownRewritesExplicitHeadingAnchorLinks(t *testing.T) {
 }
 
 func TestDocsUpdate_ReplaceRangeMarkdownRewritesExplicitHeadingAnchorLinks(t *testing.T) {
-	origDocs := newDocsService
-	t.Cleanup(func() { newDocsService = origDocs })
+	t.Parallel()
 
 	var batchRequests [][]*docs.Request
 	gets := 0
@@ -296,10 +291,9 @@ func TestDocsUpdate_ReplaceRangeMarkdownRewritesExplicitHeadingAnchorLinks(t *te
 		}
 	}))
 	defer cleanup()
-	newDocsService = func(context.Context, string) (*docs.Service, error) { return docSvc, nil }
 
 	flags := &RootFlags{Account: "a@b.com"}
-	ctx := newDocsJSONContext(t)
+	ctx := withDocsTestService(newCmdRuntimeJSONOutputContext(t, io.Discard, io.Discard), docSvc)
 	markdown := "# Files {#attachments}\n\n[Jump](#attachments)\n"
 	if err := runKong(t, &DocsUpdateCmd{}, []string{"doc1", "--text", markdown, "--markdown", "--replace-range", "1:7"}, ctx, flags); err != nil {
 		t.Fatalf("update replace markdown: %v", err)
@@ -351,8 +345,7 @@ func markdownAnchorRewriteDoc(docID, headingID, linkURL string) *docs.Document {
 }
 
 func TestDocsUpdate_ReplaceRangePlainWithTab(t *testing.T) {
-	origDocs := newDocsService
-	t.Cleanup(func() { newDocsService = origDocs })
+	t.Parallel()
 
 	var batchRequests [][]*docs.Request
 
@@ -378,10 +371,9 @@ func TestDocsUpdate_ReplaceRangePlainWithTab(t *testing.T) {
 		}
 	}))
 	defer cleanup()
-	newDocsService = func(context.Context, string) (*docs.Service, error) { return docSvc, nil }
 
 	flags := &RootFlags{Account: "a@b.com"}
-	ctx := newDocsJSONContext(t)
+	ctx := withDocsTestService(newCmdRuntimeJSONOutputContext(t, io.Discard, io.Discard), docSvc)
 
 	if err := runKong(t, &DocsUpdateCmd{}, []string{
 		"doc1", "--text", "replacement", "--replace-range", "7:12", "--tab", "Second",
@@ -405,8 +397,7 @@ func TestDocsUpdate_ReplaceRangePlainWithTab(t *testing.T) {
 }
 
 func TestDocsUpdate_ReplaceRangeMarkdownWithTab(t *testing.T) {
-	origDocs := newDocsService
-	t.Cleanup(func() { newDocsService = origDocs })
+	t.Parallel()
 
 	var batchRequests [][]*docs.Request
 	var includeTabsCalls int
@@ -436,20 +427,16 @@ func TestDocsUpdate_ReplaceRangeMarkdownWithTab(t *testing.T) {
 		}
 	}))
 	defer cleanup()
-	newDocsService = func(context.Context, string) (*docs.Service, error) { return docSvc, nil }
 
 	flags := &RootFlags{Account: "a@b.com"}
-	ctx := newDocsJSONContext(t)
+	var output bytes.Buffer
+	ctx := withDocsTestService(newCmdRuntimeJSONOutputContext(t, &output, io.Discard), docSvc)
 
 	markdown := "## New Heading\n\n**bold** and [link](https://example.com)\n"
-	var runErr error
-	out := captureStdout(t, func() {
-		runErr = runKong(t, &DocsUpdateCmd{}, []string{
-			"doc1", "--text", markdown, "--markdown", "--replace-range", "7:12", "--tab", "Second",
-		}, ctx, flags)
-	})
-	if runErr != nil {
-		t.Fatalf("update replace-range markdown with tab: %v", runErr)
+	if err := runKong(t, &DocsUpdateCmd{}, []string{
+		"doc1", "--text", markdown, "--markdown", "--replace-range", "7:12", "--tab", "Second",
+	}, ctx, flags); err != nil {
+		t.Fatalf("update replace-range markdown with tab: %v", err)
 	}
 
 	if includeTabsCalls == 0 {
@@ -471,8 +458,8 @@ func TestDocsUpdate_ReplaceRangeMarkdownWithTab(t *testing.T) {
 	var payload struct {
 		Requests int `json:"requests"`
 	}
-	if err := json.Unmarshal([]byte(out), &payload); err != nil {
-		t.Fatalf("unmarshal output: %v\noutput=%q", err, out)
+	if err := json.Unmarshal(output.Bytes(), &payload); err != nil {
+		t.Fatalf("unmarshal output: %v\noutput=%q", err, output.String())
 	}
 	if payload.Requests != len(reqs) {
 		t.Fatalf("reported requests = %d, want actual batch request count %d", payload.Requests, len(reqs))
@@ -499,8 +486,7 @@ func TestDocsUpdate_ReplaceRangeMarkdownWithTab(t *testing.T) {
 }
 
 func TestDocsWriteUpdate_Pageless(t *testing.T) {
-	origDocs := newDocsService
-	t.Cleanup(func() { newDocsService = origDocs })
+	t.Parallel()
 
 	var batchRequests [][]*docs.Request
 
@@ -535,10 +521,9 @@ func TestDocsWriteUpdate_Pageless(t *testing.T) {
 		}
 	}))
 	defer cleanup()
-	newDocsService = func(context.Context, string) (*docs.Service, error) { return docSvc, nil }
 
 	flags := &RootFlags{Account: "a@b.com"}
-	ctx := newDocsJSONContext(t)
+	ctx := withDocsTestService(newCmdRuntimeJSONOutputContext(t, io.Discard, io.Discard), docSvc)
 
 	if err := runKong(t, &DocsWriteCmd{}, []string{"doc1", "--text", "hello", "--pageless"}, ctx, flags); err != nil {
 		t.Fatalf("write pageless: %v", err)
@@ -568,8 +553,7 @@ func TestDocsWriteUpdate_Pageless(t *testing.T) {
 }
 
 func TestDocsWrite_PageSizeAndMargins(t *testing.T) {
-	origDocs := newDocsService
-	t.Cleanup(func() { newDocsService = origDocs })
+	t.Parallel()
 
 	var batchRequests [][]*docs.Request
 
@@ -597,10 +581,9 @@ func TestDocsWrite_PageSizeAndMargins(t *testing.T) {
 		}
 	}))
 	defer cleanup()
-	newDocsService = func(context.Context, string) (*docs.Service, error) { return docSvc, nil }
 
 	flags := &RootFlags{Account: "a@b.com"}
-	ctx := newDocsJSONContext(t)
+	ctx := withDocsTestService(newCmdRuntimeJSONOutputContext(t, io.Discard, io.Discard), docSvc)
 
 	args := []string{"doc1", "--text", "hello", "--page-width=8.5in", "--margin-left=0.5in", "--margin-right=0.5in"}
 	if err := runKong(t, &DocsWriteCmd{}, args, ctx, flags); err != nil {
@@ -625,15 +608,15 @@ func TestDocsWrite_PageSizeAndMargins(t *testing.T) {
 }
 
 func TestDocsWrite_InvalidLayoutValueFailsBeforeMutation(t *testing.T) {
-	origDocs := newDocsService
-	t.Cleanup(func() { newDocsService = origDocs })
-	newDocsService = func(context.Context, string) (*docs.Service, error) {
+	t.Parallel()
+
+	docsFactory := func(context.Context, string) (*docs.Service, error) {
 		t.Fatal("invalid layout value should fail before creating Docs service")
 		return nil, errors.New("unexpected Docs service creation")
 	}
 
 	flags := &RootFlags{Account: "a@b.com"}
-	ctx := newDocsJSONContext(t)
+	ctx := withDocsTestServiceFactory(newCmdRuntimeJSONOutputContext(t, io.Discard, io.Discard), docsFactory)
 
 	err := runKong(t, &DocsWriteCmd{}, []string{"doc1", "--text", "hello", "--page-width=bogus"}, ctx, flags)
 	if err == nil || !strings.Contains(err.Error(), "invalid --page-width") {
