@@ -119,10 +119,9 @@ func TestGmailSendCmd_Run_EmptySignatureWarnsAndSends(t *testing.T) {
 		}
 	})
 	defer cleanup()
-	stubGmailServiceForTest(t, svc)
 
 	var stderr strings.Builder
-	ctx := newGmailSendSignatureTestContext(t, io.Discard, &stderr)
+	ctx := withGmailTestService(newGmailSendSignatureTestContext(t, io.Discard, &stderr), svc)
 	err := (&GmailSendCmd{
 		To:        "recipient@example.com",
 		Subject:   "Hello",
@@ -166,9 +165,9 @@ func runGmailSendWithSignatureServer(t *testing.T, handler http.HandlerFunc, cmd
 		handler(w, r)
 	})
 	defer cleanup()
-	stubGmailServiceForTest(t, svc)
 
-	if err := cmd.Run(newGmailSendSignatureTestContext(t, io.Discard, io.Discard), &RootFlags{Account: "a@b.com"}); err != nil {
+	ctx := withGmailTestService(newGmailSendSignatureTestContext(t, io.Discard, io.Discard), svc)
+	if err := cmd.Run(ctx, &RootFlags{Account: "a@b.com"}); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	return raw

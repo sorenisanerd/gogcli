@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -210,20 +212,18 @@ func TestGmailArchiveCmd_ArchivesWholeThreads(t *testing.T) {
 		_, _ = w.Write([]byte(`{"id":"ok"}`))
 	})
 	defer cleanup()
-	stubGmailServiceForTest(t, svc)
 
-	ctx := outfmt.WithMode(context.Background(), outfmt.Mode{JSON: true})
-	out := captureStdout(t, func() {
-		if err := runKong(t, &GmailArchiveCmd{}, []string{"--thread", "thread1", "thread2"}, ctx, &RootFlags{Account: "a@b.com"}); err != nil {
-			t.Fatalf("archive threads: %v", err)
-		}
-	})
+	var out bytes.Buffer
+	ctx := withGmailTestService(newCmdRuntimeJSONOutputContext(t, &out, io.Discard), svc)
+	if err := runKong(t, &GmailArchiveCmd{}, []string{"--thread", "thread1", "thread2"}, ctx, &RootFlags{Account: "a@b.com"}); err != nil {
+		t.Fatalf("archive threads: %v", err)
+	}
 	if strings.Join(modified, ",") != "thread1,thread2" {
 		t.Fatalf("modified threads = %v", modified)
 	}
 
 	var got map[string]any
-	if err := json.Unmarshal([]byte(out), &got); err != nil {
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
 		t.Fatalf("decode output: %v", err)
 	}
 	if count, _ := got["count"].(float64); count != 2 {
@@ -253,13 +253,10 @@ func TestGmailArchiveCmd_ReportsPartialThreadFailures(t *testing.T) {
 		_, _ = w.Write([]byte(`{"id":"ok"}`))
 	})
 	defer cleanup()
-	stubGmailServiceForTest(t, svc)
 
-	ctx := outfmt.WithMode(context.Background(), outfmt.Mode{JSON: true})
-	var runErr error
-	out := captureStdout(t, func() {
-		runErr = runKong(t, &GmailArchiveCmd{}, []string{"--thread", "thread1", "thread2", "thread3"}, ctx, &RootFlags{Account: "a@b.com"})
-	})
+	var out bytes.Buffer
+	ctx := withGmailTestService(newCmdRuntimeJSONOutputContext(t, &out, io.Discard), svc)
+	runErr := runKong(t, &GmailArchiveCmd{}, []string{"--thread", "thread1", "thread2", "thread3"}, ctx, &RootFlags{Account: "a@b.com"})
 	if runErr == nil || !strings.Contains(runErr.Error(), "archived 2 of 3 threads; 1 failed") {
 		t.Fatalf("unexpected error: %v", runErr)
 	}
@@ -276,7 +273,7 @@ func TestGmailArchiveCmd_ReportsPartialThreadFailures(t *testing.T) {
 			Error    string `json:"error"`
 		} `json:"results"`
 	}
-	if err := json.Unmarshal([]byte(out), &got); err != nil {
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
 		t.Fatalf("decode output: %v", err)
 	}
 	if got.Count != 2 || got.Failed != 1 || len(got.Results) != 3 {

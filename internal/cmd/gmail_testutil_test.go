@@ -22,11 +22,6 @@ func newGmailServiceFromServer(t *testing.T, srv *httptest.Server) *gmail.Servic
 	return newGoogleTestServiceWithEndpoint(t, srv.Client(), srv.URL+"/", gmail.NewService)
 }
 
-func stubGmailServiceForTest(t *testing.T, svc *gmail.Service) {
-	t.Helper()
-	stubGoogleTestService(t, &newGmailService, svc)
-}
-
 func withGmailTestService(ctx context.Context, svc *gmail.Service) context.Context {
 	return withGmailTestServiceFactory(ctx, func(context.Context, string) (*gmail.Service, error) {
 		return svc, nil

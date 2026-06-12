@@ -24,7 +24,7 @@ func newDefaultRuntime() *app.Runtime {
 		},
 		Services: app.Services{
 			Drive:          googleapi.NewDrive,
-			Gmail:          newGmailService,
+			Gmail:          googleapi.NewGmail,
 			PeopleContacts: newPeopleContactsService,
 			Slides:         googleapi.NewSlides,
 			DriveDownload:  driveDownload,
@@ -104,7 +104,7 @@ func gmailServiceFactory(ctx context.Context) app.GmailServiceFactory {
 	if runtime, ok := app.FromContext(ctx); ok && runtime.Services.Gmail != nil {
 		return runtime.Services.Gmail
 	}
-	return newGmailService
+	return googleapi.NewGmail
 }
 
 func peopleContactsService(ctx context.Context, account string) (*people.Service, error) {

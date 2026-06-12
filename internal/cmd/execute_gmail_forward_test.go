@@ -90,21 +90,16 @@ func TestExecute_GmailForward_Basic(t *testing.T) {
 		}
 	})
 	defer cleanup()
-	stubGmailServiceForTest(t, svc)
-
-	_ = captureStdout(t, func() {
-		_ = captureStderr(t, func() {
-			if err := Execute([]string{
-				"--json",
-				"--account", "me@example.com",
-				"gmail", "forward", "orig-msg-1",
-				"--to", "recipient@example.com",
-				"--note", "FYI see below",
-			}); err != nil {
-				t.Fatalf("Execute: %v", err)
-			}
-		})
-	})
+	result := executeWithGmailTestService(t, []string{
+		"--json",
+		"--account", "me@example.com",
+		"gmail", "forward", "orig-msg-1",
+		"--to", "recipient@example.com",
+		"--note", "FYI see below",
+	}, svc)
+	if result.err != nil {
+		t.Fatalf("Execute: %v", result.err)
+	}
 
 	// Verify subject.
 	if !strings.Contains(sentRaw, "Subject: Fwd: Original Subject") {
@@ -182,20 +177,15 @@ func TestExecute_GmailForward_WithAttachments(t *testing.T) {
 		}
 	})
 	defer cleanup()
-	stubGmailServiceForTest(t, svc)
-
-	_ = captureStdout(t, func() {
-		_ = captureStderr(t, func() {
-			if err := Execute([]string{
-				"--json",
-				"--account", "me@example.com",
-				"gmail", "forward", "orig-msg-1",
-				"--to", "recipient@example.com",
-			}); err != nil {
-				t.Fatalf("Execute: %v", err)
-			}
-		})
-	})
+	result := executeWithGmailTestService(t, []string{
+		"--json",
+		"--account", "me@example.com",
+		"gmail", "forward", "orig-msg-1",
+		"--to", "recipient@example.com",
+	}, svc)
+	if result.err != nil {
+		t.Fatalf("Execute: %v", result.err)
+	}
 
 	if !attachmentFetched {
 		t.Error("expected attachment to be fetched for re-attachment")
@@ -230,21 +220,16 @@ func TestExecute_GmailForward_SkipAttachments(t *testing.T) {
 		}
 	})
 	defer cleanup()
-	stubGmailServiceForTest(t, svc)
-
-	_ = captureStdout(t, func() {
-		_ = captureStderr(t, func() {
-			if err := Execute([]string{
-				"--json",
-				"--account", "me@example.com",
-				"gmail", "forward", "orig-msg-1",
-				"--to", "recipient@example.com",
-				"--skip-attachments",
-			}); err != nil {
-				t.Fatalf("Execute: %v", err)
-			}
-		})
-	})
+	result := executeWithGmailTestService(t, []string{
+		"--json",
+		"--account", "me@example.com",
+		"gmail", "forward", "orig-msg-1",
+		"--to", "recipient@example.com",
+		"--skip-attachments",
+	}, svc)
+	if result.err != nil {
+		t.Fatalf("Execute: %v", result.err)
+	}
 
 	if attachmentFetched {
 		t.Error("expected attachments to NOT be fetched when --skip-attachments is set")
@@ -265,18 +250,16 @@ func TestExecute_GmailForward_NoSendAccountBlocksBeforeSend(t *testing.T) {
 		http.NotFound(w, r)
 	})
 	defer cleanup()
-	stubGmailServiceForTest(t, svc)
-
-	err := Execute([]string{
+	result := executeWithGmailTestService(t, []string{
 		"--account", "me@example.com",
 		"gmail", "forward", "orig-msg-1",
 		"--to", "recipient@example.com",
-	})
-	if err == nil {
+	}, svc)
+	if result.err == nil {
 		t.Fatalf("expected no-send error")
 	}
-	if !strings.Contains(err.Error(), "no-send") {
-		t.Fatalf("unexpected error: %v", err)
+	if !strings.Contains(result.err.Error(), "no-send") {
+		t.Fatalf("unexpected error: %v", result.err)
 	}
 	if requests != 0 {
 		t.Fatalf("expected no Gmail API requests, got %d", requests)

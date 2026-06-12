@@ -1,9 +1,5 @@
 package cmd
 
-import "github.com/steipete/gogcli/internal/googleapi"
-
-var newGmailService = googleapi.NewGmail
-
 type GmailCmd struct {
 	Search     GmailSearchCmd     `cmd:"" name:"search" aliases:"find,query,ls,list" group:"Read" help:"Search threads using Gmail query syntax"`
 	Messages   GmailMessagesCmd   `cmd:"" name:"messages" aliases:"message,msg,msgs" group:"Read" help:"Message operations"`
