@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	admin "google.golang.org/api/admin/directory/v1"
@@ -40,7 +39,7 @@ func (c *AdminGroupsListCmd) Run(ctx context.Context, flags *RootFlags) error {
 		return err
 	}
 
-	svc, err := newAdminDirectoryService(ctx, account)
+	svc, err := adminDirectoryService(ctx, account)
 	if err != nil {
 		return wrapAdminDirectoryError(err, account)
 	}
@@ -84,7 +83,7 @@ func (c *AdminGroupsListCmd) Run(ctx context.Context, flags *RootFlags) error {
 				DirectMembersCount: group.DirectMembersCount,
 			})
 		}
-		if err := outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		if err := outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"groups":        items,
 			"nextPageToken": nextPageToken,
 		}); err != nil {
@@ -151,7 +150,7 @@ func (c *AdminGroupsMembersListCmd) Run(ctx context.Context, flags *RootFlags) e
 		return err
 	}
 
-	svc, err := newAdminDirectoryService(ctx, account)
+	svc, err := adminDirectoryService(ctx, account)
 	if err != nil {
 		return wrapAdminDirectoryError(err, account)
 	}
@@ -192,7 +191,7 @@ func (c *AdminGroupsMembersListCmd) Run(ctx context.Context, flags *RootFlags) e
 				Type:  member.Type,
 			})
 		}
-		if err := outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		if err := outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"members":       items,
 			"nextPageToken": nextPageToken,
 		}); err != nil {
@@ -265,7 +264,7 @@ func (c *AdminGroupsMembersAddCmd) Run(ctx context.Context, flags *RootFlags) er
 		return err
 	}
 
-	svc, err := newAdminDirectoryService(ctx, account)
+	svc, err := adminDirectoryService(ctx, account)
 	if err != nil {
 		return wrapAdminDirectoryError(err, account)
 	}
@@ -276,7 +275,7 @@ func (c *AdminGroupsMembersAddCmd) Run(ctx context.Context, flags *RootFlags) er
 	}
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"email": created.Email,
 			"role":  created.Role,
 		})
@@ -310,7 +309,7 @@ func (c *AdminGroupsMembersRemoveCmd) Run(ctx context.Context, flags *RootFlags)
 		return err
 	}
 
-	svc, err := newAdminDirectoryService(ctx, account)
+	svc, err := adminDirectoryService(ctx, account)
 	if err != nil {
 		return wrapAdminDirectoryError(err, account)
 	}
@@ -320,7 +319,7 @@ func (c *AdminGroupsMembersRemoveCmd) Run(ctx context.Context, flags *RootFlags)
 	}
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"removed": true,
 			"email":   memberEmail,
 			"group":   groupEmail,

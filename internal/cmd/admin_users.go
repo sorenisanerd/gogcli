@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -46,7 +45,7 @@ func (c *AdminUsersListCmd) Run(ctx context.Context, flags *RootFlags) error {
 		return err
 	}
 
-	svc, err := newAdminDirectoryService(ctx, account)
+	svc, err := adminDirectoryService(ctx, account)
 	if err != nil {
 		return wrapAdminDirectoryError(err, account)
 	}
@@ -94,7 +93,7 @@ func (c *AdminUsersListCmd) Run(ctx context.Context, flags *RootFlags) error {
 				Admin:     user.IsAdmin,
 			})
 		}
-		if err := outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		if err := outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"users":         items,
 			"nextPageToken": nextPageToken,
 		}); err != nil {
@@ -156,7 +155,7 @@ func (c *AdminUsersGetCmd) Run(ctx context.Context, flags *RootFlags) error {
 		return usage("user email required")
 	}
 
-	svc, err := newAdminDirectoryService(ctx, account)
+	svc, err := adminDirectoryService(ctx, account)
 	if err != nil {
 		return wrapAdminDirectoryError(err, account)
 	}
@@ -191,7 +190,7 @@ func (c *AdminUsersGetCmd) Run(ctx context.Context, flags *RootFlags) error {
 			givenName = user.Name.GivenName
 			familyName = user.Name.FamilyName
 		}
-		return outfmt.WriteJSON(ctx, os.Stdout, item{
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), item{
 			Email:       user.PrimaryEmail,
 			Name:        name,
 			GivenName:   givenName,
@@ -342,7 +341,7 @@ func (c *AdminUsersCreateCmd) Run(ctx context.Context, flags *RootFlags) error {
 		user.HashFunction = hashFunction
 	}
 
-	svc, err := newAdminDirectoryService(ctx, account)
+	svc, err := adminDirectoryService(ctx, account)
 	if err != nil {
 		return wrapAdminDirectoryError(err, account)
 	}
@@ -377,7 +376,7 @@ func (c *AdminUsersCreateCmd) Run(ctx context.Context, flags *RootFlags) error {
 		if generatedPassword {
 			result["generatedPassword"] = password
 		}
-		return outfmt.WriteJSON(ctx, os.Stdout, result)
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), result)
 	}
 
 	u := ui.FromContext(ctx)
@@ -431,7 +430,7 @@ func (c *AdminUsersDeleteCmd) Run(ctx context.Context, flags *RootFlags) error {
 		return err
 	}
 
-	svc, err := newAdminDirectoryService(ctx, account)
+	svc, err := adminDirectoryService(ctx, account)
 	if err != nil {
 		return wrapAdminDirectoryError(err, account)
 	}
@@ -441,7 +440,7 @@ func (c *AdminUsersDeleteCmd) Run(ctx context.Context, flags *RootFlags) error {
 	}
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"email":   userEmail,
 			"deleted": true,
 		})
@@ -474,7 +473,7 @@ func (c *AdminUsersSuspendCmd) Run(ctx context.Context, flags *RootFlags) error 
 		return err
 	}
 
-	svc, err := newAdminDirectoryService(ctx, account)
+	svc, err := adminDirectoryService(ctx, account)
 	if err != nil {
 		return wrapAdminDirectoryError(err, account)
 	}
@@ -485,7 +484,7 @@ func (c *AdminUsersSuspendCmd) Run(ctx context.Context, flags *RootFlags) error 
 	}
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"email":     updated.PrimaryEmail,
 			"suspended": updated.Suspended,
 		})

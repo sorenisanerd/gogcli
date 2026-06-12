@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	admin "google.golang.org/api/admin/directory/v1"
@@ -33,7 +32,7 @@ func (c *AdminOrgunitsListCmd) Run(ctx context.Context, flags *RootFlags) error 
 		return err
 	}
 
-	svc, err := newAdminOrgUnitDirectoryService(ctx, account)
+	svc, err := adminOrgUnitDirectoryService(ctx, account)
 	if err != nil {
 		return wrapAdminOrgUnitDirectoryError(err, account)
 	}
@@ -48,7 +47,7 @@ func (c *AdminOrgunitsListCmd) Run(ctx context.Context, flags *RootFlags) error 
 	}
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, resp)
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), resp)
 	}
 	if len(resp.OrganizationUnits) == 0 {
 		u.Err().Println("No organizational units found")
@@ -93,7 +92,7 @@ func (c *AdminOrgunitsGetCmd) Run(ctx context.Context, flags *RootFlags) error {
 		return usage("org unit path required")
 	}
 
-	svc, err := newAdminOrgUnitDirectoryService(ctx, account)
+	svc, err := adminOrgUnitDirectoryService(ctx, account)
 	if err != nil {
 		return wrapAdminOrgUnitDirectoryError(err, account)
 	}
@@ -104,7 +103,7 @@ func (c *AdminOrgunitsGetCmd) Run(ctx context.Context, flags *RootFlags) error {
 	}
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, ou)
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), ou)
 	}
 
 	w, flush := tableWriter(ctx)
@@ -152,7 +151,7 @@ func (c *AdminOrgunitsCreateCmd) Run(ctx context.Context, flags *RootFlags) erro
 		return err
 	}
 
-	svc, err := newAdminOrgUnitDirectoryService(ctx, account)
+	svc, err := adminOrgUnitDirectoryService(ctx, account)
 	if err != nil {
 		return wrapAdminOrgUnitDirectoryError(err, account)
 	}
@@ -163,7 +162,7 @@ func (c *AdminOrgunitsCreateCmd) Run(ctx context.Context, flags *RootFlags) erro
 	}
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, created)
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), created)
 	}
 	u.Out().Linef("Created org unit: %s (%s)", created.Name, created.OrgUnitPath)
 	return nil
@@ -218,7 +217,7 @@ func (c *AdminOrgunitsUpdateCmd) Run(ctx context.Context, flags *RootFlags) erro
 		return usage("org unit path required")
 	}
 
-	svc, err := newAdminOrgUnitDirectoryService(ctx, account)
+	svc, err := adminOrgUnitDirectoryService(ctx, account)
 	if err != nil {
 		return wrapAdminOrgUnitDirectoryError(err, account)
 	}
@@ -229,7 +228,7 @@ func (c *AdminOrgunitsUpdateCmd) Run(ctx context.Context, flags *RootFlags) erro
 	}
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, updated)
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), updated)
 	}
 	u.Out().Linef("Updated org unit: %s (%s)", updated.Name, updated.OrgUnitPath)
 	return nil
@@ -261,7 +260,7 @@ func (c *AdminOrgunitsDeleteCmd) Run(ctx context.Context, flags *RootFlags) erro
 		return usage("org unit path required")
 	}
 
-	svc, err := newAdminOrgUnitDirectoryService(ctx, account)
+	svc, err := adminOrgUnitDirectoryService(ctx, account)
 	if err != nil {
 		return wrapAdminOrgUnitDirectoryError(err, account)
 	}

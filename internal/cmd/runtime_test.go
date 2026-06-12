@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	admin "google.golang.org/api/admin/directory/v1"
 	analyticsadmin "google.golang.org/api/analyticsadmin/v1beta"
 	analyticsdata "google.golang.org/api/analyticsdata/v1beta"
 	"google.golang.org/api/chat/v1"
@@ -66,6 +67,56 @@ func TestExecuteRuntimeRoutesEarlyErrors(t *testing.T) {
 	}
 	if stdout.Len() != 0 {
 		t.Fatalf("stdout = %q, want empty", stdout.String())
+	}
+}
+
+func TestAdminDirectoryServiceUsesRuntimeFactory(t *testing.T) {
+	t.Parallel()
+
+	want := &admin.Service{}
+	var gotAccount string
+	runtime := &app.Runtime{Services: app.Services{
+		AdminDirectory: func(_ context.Context, account string) (*admin.Service, error) {
+			gotAccount = account
+			return want, nil
+		},
+	}}
+	ctx := app.WithRuntime(context.Background(), runtime)
+
+	got, err := adminDirectoryService(ctx, "test@example.com")
+	if err != nil {
+		t.Fatalf("adminDirectoryService() error = %v", err)
+	}
+	if got != want {
+		t.Fatalf("adminDirectoryService() = %p, want %p", got, want)
+	}
+	if gotAccount != "test@example.com" {
+		t.Fatalf("factory account = %q, want test@example.com", gotAccount)
+	}
+}
+
+func TestAdminOrgUnitDirectoryServiceUsesRuntimeFactory(t *testing.T) {
+	t.Parallel()
+
+	want := &admin.Service{}
+	var gotAccount string
+	runtime := &app.Runtime{Services: app.Services{
+		AdminOrgUnit: func(_ context.Context, account string) (*admin.Service, error) {
+			gotAccount = account
+			return want, nil
+		},
+	}}
+	ctx := app.WithRuntime(context.Background(), runtime)
+
+	got, err := adminOrgUnitDirectoryService(ctx, "test@example.com")
+	if err != nil {
+		t.Fatalf("adminOrgUnitDirectoryService() error = %v", err)
+	}
+	if got != want {
+		t.Fatalf("adminOrgUnitDirectoryService() = %p, want %p", got, want)
+	}
+	if gotAccount != "test@example.com" {
+		t.Fatalf("factory account = %q, want test@example.com", gotAccount)
 	}
 }
 

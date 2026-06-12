@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	admin "google.golang.org/api/admin/directory/v1"
 	analyticsadmin "google.golang.org/api/analyticsadmin/v1beta"
 	analyticsdata "google.golang.org/api/analyticsdata/v1beta"
 	"google.golang.org/api/calendar/v3"
@@ -35,6 +36,8 @@ func newDefaultRuntime() *app.Runtime {
 			Err: os.Stderr,
 		},
 		Services: app.Services{
+			AdminDirectory: newAdminDirectoryService,
+			AdminOrgUnit:   newAdminOrgUnitDirectoryService,
 			AnalyticsAdmin: googleapi.NewAnalyticsAdmin,
 			AnalyticsData:  googleapi.NewAnalyticsData,
 			Calendar:       googleapi.NewCalendar,
@@ -76,6 +79,12 @@ func normalizedRuntime(runtime *app.Runtime) *app.Runtime {
 	}
 	if normalized.IO.Err == nil {
 		normalized.IO.Err = defaults.IO.Err
+	}
+	if normalized.Services.AdminDirectory == nil {
+		normalized.Services.AdminDirectory = defaults.Services.AdminDirectory
+	}
+	if normalized.Services.AdminOrgUnit == nil {
+		normalized.Services.AdminOrgUnit = defaults.Services.AdminOrgUnit
 	}
 	if normalized.Services.AnalyticsAdmin == nil {
 		normalized.Services.AnalyticsAdmin = defaults.Services.AnalyticsAdmin
@@ -165,6 +174,20 @@ func stdoutWriter(ctx context.Context) io.Writer {
 
 func stderrWriter(ctx context.Context) io.Writer {
 	return commandIO(ctx).Err
+}
+
+func adminDirectoryService(ctx context.Context, account string) (*admin.Service, error) {
+	if runtime, ok := app.FromContext(ctx); ok && runtime.Services.AdminDirectory != nil {
+		return runtime.Services.AdminDirectory(ctx, account)
+	}
+	return newAdminDirectoryService(ctx, account)
+}
+
+func adminOrgUnitDirectoryService(ctx context.Context, account string) (*admin.Service, error) {
+	if runtime, ok := app.FromContext(ctx); ok && runtime.Services.AdminOrgUnit != nil {
+		return runtime.Services.AdminOrgUnit(ctx, account)
+	}
+	return newAdminOrgUnitDirectoryService(ctx, account)
 }
 
 func analyticsAdminService(ctx context.Context, account string) (*analyticsadmin.Service, error) {

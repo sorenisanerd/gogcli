@@ -64,7 +64,7 @@ func buildAdminBackupSnapshot(ctx context.Context, flags *RootFlags, shardMaxRow
 	if err != nil {
 		return backup.Snapshot{}, err
 	}
-	svc, err := newAdminDirectoryService(ctx, account)
+	svc, err := adminDirectoryService(ctx, account)
 	if err != nil {
 		return backup.Snapshot{}, wrapAdminDirectoryError(err, account)
 	}

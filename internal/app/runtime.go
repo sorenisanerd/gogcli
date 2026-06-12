@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 
+	admin "google.golang.org/api/admin/directory/v1"
 	analyticsadmin "google.golang.org/api/analyticsadmin/v1beta"
 	analyticsdata "google.golang.org/api/analyticsdata/v1beta"
 	"google.golang.org/api/calendar/v3"
@@ -31,6 +32,7 @@ type IO struct {
 }
 
 type (
+	AdminDirectoryServiceFactory func(context.Context, string) (*admin.Service, error)
 	AnalyticsAdminServiceFactory func(context.Context, string) (*analyticsadmin.Service, error)
 	AnalyticsDataServiceFactory  func(context.Context, string) (*analyticsdata.Service, error)
 	CalendarServiceFactory       func(context.Context, string) (*calendar.Service, error)
@@ -58,6 +60,8 @@ type ZoomMeetingClient interface {
 }
 
 type Services struct {
+	AdminDirectory  AdminDirectoryServiceFactory
+	AdminOrgUnit    AdminDirectoryServiceFactory
 	AnalyticsAdmin  AnalyticsAdminServiceFactory
 	AnalyticsData   AnalyticsDataServiceFactory
 	Calendar        CalendarServiceFactory
