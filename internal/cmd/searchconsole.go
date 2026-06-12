@@ -67,7 +67,7 @@ func (c *SearchConsoleSitesListCmd) Run(ctx context.Context, flags *RootFlags) e
 
 	rows := resp.SiteEntry
 	if outfmt.IsJSON(ctx) {
-		if err := outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		if err := outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"sites": rows,
 		}); err != nil {
 			return err
@@ -121,7 +121,7 @@ func (c *SearchConsoleSitesGetCmd) Run(ctx context.Context, flags *RootFlags) er
 	}
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"site": site,
 		})
 	}
@@ -184,7 +184,7 @@ func (c *SearchConsoleQueryCmd) Run(ctx context.Context, flags *RootFlags) error
 	}
 
 	if outfmt.IsJSON(ctx) {
-		if err := outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		if err := outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"site_url":                  siteURL,
 			"from":                      req.StartDate,
 			"to":                        req.EndDate,
@@ -349,7 +349,7 @@ func (c *SearchConsoleSitemapsListCmd) Run(ctx context.Context, flags *RootFlags
 
 	rows := resp.Sitemap
 	if outfmt.IsJSON(ctx) {
-		if err := outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		if err := outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"sitemaps": rows,
 		}); err != nil {
 			return err
@@ -417,7 +417,7 @@ func (c *SearchConsoleSitemapsGetCmd) Run(ctx context.Context, flags *RootFlags)
 	}
 
 	if outfmt.IsJSON(ctx) {
-		return outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		return outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"sitemap": sitemap,
 		})
 	}

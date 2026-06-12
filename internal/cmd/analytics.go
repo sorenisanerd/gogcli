@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	analyticsadmin "google.golang.org/api/analyticsadmin/v1beta"
@@ -74,7 +73,7 @@ func (c *AnalyticsAccountsCmd) Run(ctx context.Context, flags *RootFlags) error 
 	}
 
 	if outfmt.IsJSON(ctx) {
-		if err := outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		if err := outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"account_summaries": items,
 			"nextPageToken":     nextPageToken,
 		}); err != nil {
@@ -166,7 +165,7 @@ func (c *AnalyticsReportCmd) Run(ctx context.Context, flags *RootFlags) error {
 	}
 
 	if outfmt.IsJSON(ctx) {
-		if err := outfmt.WriteJSON(ctx, os.Stdout, map[string]any{
+		if err := outfmt.WriteJSON(ctx, stdoutWriter(ctx), map[string]any{
 			"property":         property,
 			"from":             req.DateRanges[0].StartDate,
 			"to":               req.DateRanges[0].EndDate,
