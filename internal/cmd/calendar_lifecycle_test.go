@@ -86,20 +86,29 @@ func TestExecuteCalendarDeleteCalendarJSON(t *testing.T) {
 }
 
 func TestCalendarLifecycleDryRunSkipsService(t *testing.T) {
+	setupCalendarAliasHome(t)
+	const resolvedID = "resolved@group.calendar.google.com"
+	if err := defaultConfigStoreForTest(t).SetCalendarAlias("shortcut", resolvedID); err != nil {
+		t.Fatalf("SetCalendarAlias: %v", err)
+	}
+
 	tests := []struct {
 		name string
 		args []string
 		op   string
+		id   string
 	}{
 		{
 			name: "unsubscribe",
-			args: []string{"calendar", "unsubscribe", "team@example.com"},
+			args: []string{"calendar", "unsubscribe", "shortcut"},
 			op:   "calendar.unsubscribe",
+			id:   resolvedID,
 		},
 		{
 			name: "delete calendar",
-			args: []string{"calendar", "delete-calendar", "owned@example.com"},
+			args: []string{"calendar", "delete-calendar", "shortcut"},
 			op:   "calendar.delete-calendar",
+			id:   resolvedID,
 		},
 	}
 
@@ -117,13 +126,16 @@ func TestCalendarLifecycleDryRunSkipsService(t *testing.T) {
 			}
 
 			var payload struct {
-				DryRun bool   `json:"dry_run"`
-				Op     string `json:"op"`
+				DryRun  bool   `json:"dry_run"`
+				Op      string `json:"op"`
+				Request struct {
+					CalendarID string `json:"calendar_id"`
+				} `json:"request"`
 			}
 			if err := json.Unmarshal([]byte(result.stdout), &payload); err != nil {
 				t.Fatalf("decode dry-run: %v", err)
 			}
-			if !payload.DryRun || payload.Op != tc.op {
+			if !payload.DryRun || payload.Op != tc.op || payload.Request.CalendarID != tc.id {
 				t.Fatalf("unexpected dry-run output: %#v", payload)
 			}
 		})
@@ -131,18 +143,38 @@ func TestCalendarLifecycleDryRunSkipsService(t *testing.T) {
 }
 
 func TestCalendarLifecycleRequiresForceNonInteractive(t *testing.T) {
-	tests := [][]string{
-		{"--no-input", "--account", "a@b.com", "calendar", "unsubscribe", "team@example.com"},
-		{"--no-input", "--account", "a@b.com", "calendar", "delete-calendar", "owned@example.com"},
+	setupCalendarAliasHome(t)
+	const resolvedID = "resolved@group.calendar.google.com"
+	if err := defaultConfigStoreForTest(t).SetCalendarAlias("shortcut", resolvedID); err != nil {
+		t.Fatalf("SetCalendarAlias: %v", err)
 	}
-	for _, args := range tests {
-		result := executeWithCalendarTestServiceFactory(t, args, func(context.Context, string) (*calendar.Service, error) {
-			t.Fatal("calendar service opened before confirmation")
-			return nil, errors.New("unexpected calendar service call")
+
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{
+			name: "unsubscribe",
+			args: []string{"--no-input", "--account", "a@b.com", "calendar", "unsubscribe", "shortcut"},
+		},
+		{
+			name: "delete calendar",
+			args: []string{"--no-input", "--account", "a@b.com", "calendar", "delete-calendar", "shortcut"},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := executeWithCalendarTestServiceFactory(t, tc.args, func(context.Context, string) (*calendar.Service, error) {
+				t.Fatal("calendar service opened before confirmation")
+				return nil, errors.New("unexpected calendar service call")
+			})
+			if result.err == nil || ExitCode(result.err) != 2 || !strings.Contains(result.err.Error(), "--force") {
+				t.Fatalf("unexpected confirmation error: %v", result.err)
+			}
+			if !strings.Contains(result.err.Error(), resolvedID) {
+				t.Fatalf("confirmation target = %q, want resolved ID %q", result.err, resolvedID)
+			}
 		})
-		if result.err == nil || ExitCode(result.err) != 2 || !strings.Contains(result.err.Error(), "--force") {
-			t.Fatalf("unexpected confirmation error: %v", result.err)
-		}
 	}
 }
 

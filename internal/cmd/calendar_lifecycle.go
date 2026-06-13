@@ -19,10 +19,19 @@ func (c *CalendarUnsubscribeCmd) Run(ctx context.Context, flags *RootFlags) erro
 		return usage("calendarId required")
 	}
 
-	if err := dryRunAndConfirmDestructive(ctx, flags, "calendar.unsubscribe", map[string]any{
-		"calendar_id": calendarID,
-	}, fmt.Sprintf("unsubscribe from calendar %s", calendarID)); err != nil {
+	store, err := commandConfigStore(ctx)
+	if err != nil {
 		return err
+	}
+	preparedID, err := prepareCalendarID(store, calendarID, false)
+	if err != nil {
+		return err
+	}
+
+	if confirmErr := dryRunAndConfirmDestructive(ctx, flags, "calendar.unsubscribe", map[string]any{
+		"calendar_id": preparedID,
+	}, fmt.Sprintf("unsubscribe from calendar %s", preparedID)); confirmErr != nil {
+		return confirmErr
 	}
 
 	account, err := requireAccount(flags)
@@ -33,11 +42,7 @@ func (c *CalendarUnsubscribeCmd) Run(ctx context.Context, flags *RootFlags) erro
 	if err != nil {
 		return err
 	}
-	store, err := commandConfigStore(ctx)
-	if err != nil {
-		return err
-	}
-	resolvedID, err := resolveCalendarSelector(ctx, store, svc, calendarID, false)
+	resolvedID, err := resolveCalendarID(ctx, svc, preparedID)
 	if err != nil {
 		return err
 	}
@@ -63,10 +68,19 @@ func (c *CalendarDeleteCalendarCmd) Run(ctx context.Context, flags *RootFlags) e
 		return usage("calendarId required")
 	}
 
-	if err := dryRunAndConfirmDestructive(ctx, flags, "calendar.delete-calendar", map[string]any{
-		"calendar_id": calendarID,
-	}, fmt.Sprintf("permanently delete secondary calendar %s", calendarID)); err != nil {
+	store, err := commandConfigStore(ctx)
+	if err != nil {
 		return err
+	}
+	preparedID, err := prepareCalendarID(store, calendarID, false)
+	if err != nil {
+		return err
+	}
+
+	if confirmErr := dryRunAndConfirmDestructive(ctx, flags, "calendar.delete-calendar", map[string]any{
+		"calendar_id": preparedID,
+	}, fmt.Sprintf("permanently delete secondary calendar %s", preparedID)); confirmErr != nil {
+		return confirmErr
 	}
 
 	account, err := requireAccount(flags)
@@ -77,11 +91,7 @@ func (c *CalendarDeleteCalendarCmd) Run(ctx context.Context, flags *RootFlags) e
 	if err != nil {
 		return err
 	}
-	store, err := commandConfigStore(ctx)
-	if err != nil {
-		return err
-	}
-	resolvedID, err := resolveCalendarSelector(ctx, store, svc, calendarID, false)
+	resolvedID, err := resolveCalendarID(ctx, svc, preparedID)
 	if err != nil {
 		return err
 	}
