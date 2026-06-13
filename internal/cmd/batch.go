@@ -75,7 +75,7 @@ func (c *BatchBeginCmd) Run(ctx context.Context, flags *RootFlags) error {
 type BatchListCmd struct{}
 
 func (c *BatchListCmd) Run(ctx context.Context) error {
-	store, err := newDocsBatchStore(ctx)
+	store, err := openDocsBatchStore(ctx)
 	if err != nil {
 		return err
 	}
@@ -100,11 +100,15 @@ type BatchShowCmd struct {
 }
 
 func (c *BatchShowCmd) Run(ctx context.Context) error {
-	store, err := newDocsBatchStore(ctx)
+	batchID := strings.TrimSpace(c.BatchID)
+	if err := validateDocsBatchID(batchID); err != nil {
+		return err
+	}
+	store, err := openDocsBatchStore(ctx)
 	if err != nil {
 		return err
 	}
-	state, err := store.get(strings.TrimSpace(c.BatchID))
+	state, err := store.get(batchID)
 	if err != nil {
 		return err
 	}
@@ -207,24 +211,44 @@ func (c *BatchEndCmd) Run(ctx context.Context, flags *RootFlags) error {
 	if c.ContinueOnError && c.AutoSplit {
 		return usage("--continue-on-error and --auto-split are mutually exclusive")
 	}
+	batchID := strings.TrimSpace(c.BatchID)
+	if err := validateDocsBatchID(batchID); err != nil {
+		return err
+	}
+	if flags != nil && flags.DryRun {
+		store, err := openDocsBatchStore(ctx)
+		if err != nil {
+			return err
+		}
+		state, err := store.get(batchID)
+		if err != nil {
+			return err
+		}
+		if len(state.Requests) == 0 {
+			return errors.New("batch has no requests")
+		}
+
+		return writeDocsBatchEndResult(ctx, docsBatchEndResult{
+			BatchID:  state.BatchID,
+			Requests: len(state.Requests),
+			Atomic:   !c.AutoSplit,
+			DryRun:   true,
+			Payload:  docsBatchWirePayload(state, state.Requests),
+		})
+	}
 	store, err := newDocsBatchStore(ctx)
 	if err != nil {
 		return err
 	}
 
 	var result docsBatchEndResult
-	err = store.withLockedState(strings.TrimSpace(c.BatchID), func(state *docsBatchState) error {
+	err = store.withLockedState(batchID, func(state *docsBatchState) error {
 		if len(state.Requests) == 0 {
 			return errors.New("batch has no requests")
 		}
 		result.BatchID = state.BatchID
 		result.Requests = len(state.Requests)
 		result.Atomic = !c.AutoSplit
-		if flags != nil && flags.DryRun {
-			result.DryRun = true
-			result.Payload = docsBatchWirePayload(state, state.Requests)
-			return nil
-		}
 		if len(state.Requests) > docsBatchUpdateRequestCap && !c.AutoSplit {
 			return usagef("batch has %d requests; Docs allows at most %d per atomic update (use --auto-split for non-atomic submission)", len(state.Requests), docsBatchUpdateRequestCap)
 		}
@@ -336,7 +360,7 @@ func validateDocsBatchTarget(ctx context.Context, flags *RootFlags, batchID, doc
 	if err != nil {
 		return err
 	}
-	store, err := newDocsBatchStore(ctx)
+	store, err := openDocsBatchStore(ctx)
 	if err != nil {
 		return err
 	}

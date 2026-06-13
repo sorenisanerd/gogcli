@@ -216,12 +216,31 @@ func TestBatchEndDryRunKeepsStateWithoutHTTP(t *testing.T) {
 		t.Fatal("dry run created HTTP client")
 		return nil, errors.New("unexpected HTTP client request")
 	})
-
-	if err := (&BatchEndCmd{BatchID: state.BatchID}).Run(ctx, &RootFlags{DryRun: true}); err != nil {
-		t.Fatalf("dry-run end: %v", err)
+	statePath := store.path(state.BatchID)
+	before, readErr := os.ReadFile(statePath)
+	if readErr != nil {
+		t.Fatalf("read state before dry run: %v", readErr)
 	}
-	if _, err := store.get(state.BatchID); err != nil {
-		t.Fatalf("dry run removed state: %v", err)
+	lockPath := filepath.Join(store.dir, ".lock")
+	if removeErr := os.Remove(lockPath); removeErr != nil {
+		t.Fatalf("remove setup lock: %v", removeErr)
+	}
+
+	if runErr := (&BatchEndCmd{BatchID: state.BatchID}).Run(ctx, &RootFlags{DryRun: true}); runErr != nil {
+		t.Fatalf("dry-run end: %v", runErr)
+	}
+	if _, getErr := store.get(state.BatchID); getErr != nil {
+		t.Fatalf("dry run removed state: %v", getErr)
+	}
+	after, readErr := os.ReadFile(statePath)
+	if readErr != nil {
+		t.Fatalf("read state after dry run: %v", readErr)
+	}
+	if !bytes.Equal(after, before) {
+		t.Fatal("dry run changed batch state")
+	}
+	if _, statErr := os.Stat(lockPath); !os.IsNotExist(statErr) {
+		t.Fatalf("dry run created lock: %v", statErr)
 	}
 }
 
@@ -243,7 +262,7 @@ func TestBatchJSONUsesRuntimeOutput(t *testing.T) {
 	}
 }
 
-func TestBatchListUsesRuntimeStateDir(t *testing.T) {
+func TestBatchListUsesRuntimeStateDirWithoutCreatingIt(t *testing.T) {
 	runtimeStateDir := t.TempDir()
 	ambientStateDir := filepath.Join(t.TempDir(), "ambient")
 	t.Setenv("GOG_STATE_DIR", ambientStateDir)
@@ -252,11 +271,78 @@ func TestBatchListUsesRuntimeStateDir(t *testing.T) {
 	if err := (&BatchListCmd{}).Run(ctx); err != nil {
 		t.Fatalf("list: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(runtimeStateDir, "batches")); err != nil {
-		t.Fatalf("runtime batch directory: %v", err)
+	if _, err := os.Stat(filepath.Join(runtimeStateDir, "batches")); !os.IsNotExist(err) {
+		t.Fatalf("runtime batch directory unexpectedly created: %v", err)
 	}
 	if _, err := os.Stat(ambientStateDir); !os.IsNotExist(err) {
 		t.Fatalf("ambient state directory unexpectedly touched: %v", err)
+	}
+}
+
+func TestBatchListAndShowReadWithoutLock(t *testing.T) {
+	ctx := batchTestContext(t)
+	store, err := newDocsBatchStore(ctx)
+	if err != nil {
+		t.Fatalf("new store: %v", err)
+	}
+	state, err := store.create(docsBatchState{
+		Service:    docsBatchService,
+		DocumentID: "doc1",
+		Account:    "a@b.com",
+		Client:     "default",
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	statePath := store.path(state.BatchID)
+	before, readErr := os.ReadFile(statePath)
+	if readErr != nil {
+		t.Fatalf("read state before commands: %v", readErr)
+	}
+	lockPath := filepath.Join(store.dir, ".lock")
+	if removeErr := os.Remove(lockPath); removeErr != nil {
+		t.Fatalf("remove setup lock: %v", removeErr)
+	}
+
+	if listErr := (&BatchListCmd{}).Run(ctx); listErr != nil {
+		t.Fatalf("list: %v", listErr)
+	}
+	if showErr := (&BatchShowCmd{BatchID: state.BatchID}).Run(ctx); showErr != nil {
+		t.Fatalf("show: %v", showErr)
+	}
+	after, readErr := os.ReadFile(statePath)
+	if readErr != nil {
+		t.Fatalf("read state after commands: %v", readErr)
+	}
+	if !bytes.Equal(after, before) {
+		t.Fatal("read command changed batch state")
+	}
+	if _, statErr := os.Stat(lockPath); !os.IsNotExist(statErr) {
+		t.Fatalf("read command created lock: %v", statErr)
+	}
+}
+
+func TestBatchShowAndEndValidateBeforeCreatingState(t *testing.T) {
+	stateDir := t.TempDir()
+	ctx := withDocsBatchStateDir(newCmdRuntimeOutputContext(t, io.Discard, io.Discard), stateDir)
+
+	for name, run := range map[string]func() error{
+		"show": func() error {
+			return (&BatchShowCmd{BatchID: "placeholder"}).Run(ctx)
+		},
+		"end dry-run": func() error {
+			return (&BatchEndCmd{BatchID: "placeholder"}).Run(ctx, &RootFlags{DryRun: true})
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			err := run()
+			if err == nil || !strings.Contains(err.Error(), "invalid batch ID: placeholder") {
+				t.Fatalf("error = %v", err)
+			}
+			if _, statErr := os.Stat(filepath.Join(stateDir, "batches")); !os.IsNotExist(statErr) {
+				t.Fatalf("batch directory unexpectedly created: %v", statErr)
+			}
+		})
 	}
 }
 

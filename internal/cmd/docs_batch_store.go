@@ -76,16 +76,24 @@ type docsBatchStore struct {
 }
 
 func newDocsBatchStore(ctx context.Context) (*docsBatchStore, error) {
+	store, err := openDocsBatchStore(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := os.MkdirAll(store.dir, 0o700); err != nil {
+		return nil, fmt.Errorf("ensure batch dir: %w", err)
+	}
+
+	return store, nil
+}
+
+func openDocsBatchStore(ctx context.Context) (*docsBatchStore, error) {
 	layout, err := commandLayout(ctx, config.PathKindState)
 	if err != nil {
 		return nil, err
 	}
-	dir := layout.BatchDir()
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return nil, fmt.Errorf("ensure batch dir: %w", err)
-	}
 
-	return newDocsBatchStoreAt(dir), nil
+	return newDocsBatchStoreAt(layout.BatchDir()), nil
 }
 
 func newDocsBatchStoreAt(dir string) *docsBatchStore {
@@ -120,47 +128,31 @@ func (s *docsBatchStore) create(state docsBatchState) (*docsBatchState, error) {
 }
 
 func (s *docsBatchStore) list() ([]docsBatchSummary, error) {
-	var summaries []docsBatchSummary
-	err := s.lock.WithExclusive(func() error {
-		states, err := s.listStatesUnlocked()
-		if err != nil {
-			return err
-		}
+	states, err := s.listStatesUnlocked()
+	if err != nil {
+		return nil, err
+	}
 
-		summaries = make([]docsBatchSummary, 0, len(states))
-		for _, state := range states {
-			summaries = append(summaries, docsBatchSummary{
-				BatchID:    state.BatchID,
-				Name:       state.Name,
-				Service:    state.Service,
-				DocumentID: state.DocumentID,
-				Account:    state.Account,
-				Client:     state.Client,
-				CreatedAt:  state.CreatedAt,
-				UpdatedAt:  state.UpdatedAt,
-				Requests:   len(state.Requests),
-			})
-		}
+	summaries := make([]docsBatchSummary, 0, len(states))
+	for _, state := range states {
+		summaries = append(summaries, docsBatchSummary{
+			BatchID:    state.BatchID,
+			Name:       state.Name,
+			Service:    state.Service,
+			DocumentID: state.DocumentID,
+			Account:    state.Account,
+			Client:     state.Client,
+			CreatedAt:  state.CreatedAt,
+			UpdatedAt:  state.UpdatedAt,
+			Requests:   len(state.Requests),
+		})
+	}
 
-		return nil
-	})
-
-	return summaries, err
+	return summaries, nil
 }
 
 func (s *docsBatchStore) get(batchID string) (*docsBatchState, error) {
-	var state *docsBatchState
-	err := s.lock.WithExclusive(func() error {
-		loaded, err := s.readUnlocked(batchID)
-		if err != nil {
-			return err
-		}
-		state = loaded
-
-		return nil
-	})
-
-	return state, err
+	return s.readUnlocked(batchID)
 }
 
 func (s *docsBatchStore) appendRequests(batchID, command, documentID, account, client, revisionID string, requests []*docs.Request, requireEmpty bool) (int, error) {
@@ -289,6 +281,9 @@ func (s *docsBatchStore) persistOrDeleteUnlocked(state *docsBatchState) error {
 func (s *docsBatchStore) listStatesUnlocked() ([]*docsBatchState, error) {
 	entries, err := os.ReadDir(s.dir)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return []*docsBatchState{}, nil
+		}
 		return nil, fmt.Errorf("read batch directory: %w", err)
 	}
 
@@ -297,8 +292,12 @@ func (s *docsBatchStore) listStatesUnlocked() ([]*docsBatchState, error) {
 		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
 			continue
 		}
-		state, readErr := s.readPathUnlocked(filepath.Join(s.dir, entry.Name()))
+		path := filepath.Join(s.dir, entry.Name())
+		state, readErr := s.readPathUnlocked(path)
 		if readErr != nil {
+			if _, statErr := os.Stat(path); os.IsNotExist(statErr) {
+				continue
+			}
 			return nil, readErr
 		}
 		states = append(states, state)
