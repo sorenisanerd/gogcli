@@ -272,7 +272,6 @@ Drive hierarchy semantics:
 - `gog calendar delete-calendar <ownedSecondaryCalendarId>`
 - `gog calendar acl <calendarId>`
 - `gog calendar events <calendarId> [--cal ID_OR_NAME] [--calendars CSV] [--all] [--from RFC3339] [--to RFC3339] [--max N] [--page TOKEN] [--query Q] [--weekday]`
-- `gog calendar appointments` (reports that Google Calendar appointment schedules are not currently exposed by the Calendar API)
 - `gog calendar event|get <calendarId> <eventId>`
 - `GOG_CALENDAR_WEEKDAY=1` defaults `--weekday` for `gog calendar events`
 - `gog calendar create <calendarId> --summary S --from DT --to DT [--start-timezone TZ] [--end-timezone TZ] [--description D] [--location L|--location-search Q|--place-id ID] [--place-language LANG] [--place-region REGION] [--attendees a@b.com,c@d.com] [--all-day] [--event-type TYPE]`
@@ -286,6 +285,9 @@ Drive hierarchy semantics:
 calendar list. `calendar delete-calendar` permanently deletes an owned
 secondary calendar; Google may briefly retain a stale calendar-list row after
 the authoritative calendar resource is gone.
+
+Google Calendar appointment schedules are not exposed by the Calendar API, so
+the CLI cannot list or manage them.
 
 - `gog maps places search <query> [--language LANG] [--region REGION] [--fields FIELD_MASK] [--max N]`
 - `gog maps places details <placeId> [--language LANG] [--region REGION] [--fields FIELD_MASK]`

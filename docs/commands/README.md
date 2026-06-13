@@ -2,7 +2,7 @@
 
 Every `gog` command has a generated docs page. The source of truth is the live CLI schema; run `make docs-commands` after changing command names, flags, help text, aliases, or arguments.
 
-Generated pages: 644.
+Generated pages: 643.
 
 ## Top-level Commands
 
@@ -131,7 +131,6 @@ Generated pages: 644.
       - [gog calendar alias list](gog-calendar-alias-list.md) - List calendar aliases
       - [gog calendar alias set](gog-calendar-alias-set.md) - Set a calendar alias
       - [gog calendar alias unset](gog-calendar-alias-unset.md) - Remove a calendar alias
-    - [gog calendar appointments](gog-calendar-appointments.md) - Report Calendar appointment schedule API limitation
     - [gog calendar calendars](gog-calendar-calendars.md) - List calendars
     - [gog calendar colors](gog-calendar-colors.md) - Show calendar colors
     - [gog calendar conflicts](gog-calendar-conflicts.md) - Find busy-time overlaps across calendars

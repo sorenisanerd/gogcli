@@ -80,7 +80,6 @@ Generated from `gog schema --json`.
       - [`gog calendar (cal) alias list`](commands/gog-calendar-alias-list.md) - List calendar aliases
       - [`gog calendar (cal) alias set <alias> <calendarId>`](commands/gog-calendar-alias-set.md) - Set a calendar alias
       - [`gog calendar (cal) alias unset <alias>`](commands/gog-calendar-alias-unset.md) - Remove a calendar alias
-    - [`gog calendar (cal) appointments (appointment-schedules,appt)`](commands/gog-calendar-appointments.md) - Report Calendar appointment schedule API limitation
     - [`gog calendar (cal) calendars [flags]`](commands/gog-calendar-calendars.md) - List calendars
     - [`gog calendar (cal) colors`](commands/gog-calendar-colors.md) - Show calendar colors
     - [`gog calendar (cal) conflicts [flags]`](commands/gog-calendar-conflicts.md) - Find busy-time overlaps across calendars

@@ -211,8 +211,10 @@ gog calendar create-calendar "Project calendar" --timezone Europe/London
 gog calendar delete-calendar <calendarId> --force
 gog calendar subscribe en.uk#holiday@group.v.calendar.google.com
 gog calendar unsubscribe en.uk#holiday@group.v.calendar.google.com --force
-gog calendar appointments
 ```
+
+Google Calendar appointment schedules are not exposed by the Calendar API, so
+`gog` cannot list or manage them.
 
 ### Drive
 
