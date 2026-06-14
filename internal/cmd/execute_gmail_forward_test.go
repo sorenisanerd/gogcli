@@ -129,14 +129,13 @@ func TestExecute_GmailForward_Basic(t *testing.T) {
 		t.Errorf("expected original body content in forwarded message")
 	}
 
-	// Verify thread ID was set (stays in original thread).
-	if sentThreadID != "thread-1" {
-		t.Errorf("expected threadId=thread-1, got %q", sentThreadID)
+	// A forward changes the subject, so it must not claim the original Gmail
+	// thread or stamp reply headers.
+	if sentThreadID != "" {
+		t.Errorf("expected no threadId for forward, got %q", sentThreadID)
 	}
-
-	// Verify In-Reply-To header references original Message-ID.
-	if !strings.Contains(sentRaw, "In-Reply-To: <orig-123@example.com>") {
-		t.Errorf("expected In-Reply-To header referencing original message")
+	if strings.Contains(sentRaw, "In-Reply-To:") || strings.Contains(sentRaw, "References:") {
+		t.Errorf("forward unexpectedly contains reply headers")
 	}
 }
 

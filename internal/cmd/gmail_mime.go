@@ -19,11 +19,14 @@ import (
 )
 
 type mailAttachment struct {
-	Path     string
-	Filename string
-	MIMEType string
-	Data     []byte
-	DataSet  bool
+	Path            string
+	Filename        string
+	MIMEType        string
+	Data            []byte
+	DataSet         bool
+	Inline          bool
+	ContentID       string
+	ContentLocation string
 }
 
 type mailAttachmentMetadata struct {
@@ -138,78 +141,139 @@ func buildRFC822(opts mailOptions, cfg *rfc822Config) ([]byte, error) {
 	if prepareErr != nil {
 		return nil, prepareErr
 	}
+	inlineAttachments, regularAttachments := splitInlineAttachments(attachments)
 
-	if len(opts.Attachments) == 0 {
-		switch {
-		case hasPlain && hasHTML:
-			altBoundary, err := randomBoundary()
-			if err != nil {
+	switch {
+	case len(inlineAttachments) == 0 && len(regularAttachments) == 0:
+		if err := writeBodyEntity(&b, plainBody, htmlBody, hasPlain, hasHTML); err != nil {
+			return nil, err
+		}
+	case len(regularAttachments) == 0:
+		if err := writeRelatedEntity(&b, plainBody, htmlBody, hasPlain, hasHTML, inlineAttachments); err != nil {
+			return nil, err
+		}
+	default:
+		mixedBoundary, err := randomBoundary()
+		if err != nil {
+			return nil, err
+		}
+		writeHeader(&b, "Content-Type", fmt.Sprintf("multipart/mixed; boundary=%q", mixedBoundary))
+		b.WriteString("\r\n")
+
+		fmt.Fprintf(&b, "--%s\r\n", mixedBoundary)
+		if len(inlineAttachments) > 0 {
+			if err := writeRelatedEntity(&b, plainBody, htmlBody, hasPlain, hasHTML, inlineAttachments); err != nil {
 				return nil, err
 			}
-			writeHeader(&b, "Content-Type", fmt.Sprintf("multipart/alternative; boundary=%q", altBoundary))
-			b.WriteString("\r\n")
+		} else if err := writeBodyEntity(&b, plainBody, htmlBody, hasPlain, hasHTML); err != nil {
+			return nil, err
+		}
 
-			writeTextPart(&b, altBoundary, "text/plain; charset=\"utf-8\"", plainBody)
-			writeTextPart(&b, altBoundary, "text/html; charset=\"utf-8\"", htmlBody)
-			fmt.Fprintf(&b, "--%s--\r\n", altBoundary)
-			return b.Bytes(), nil
-		case hasHTML && !hasPlain:
-			writeHeader(&b, "Content-Type", "text/html; charset=\"utf-8\"")
-			writeHeader(&b, "Content-Transfer-Encoding", textTransferEncoding(htmlBody))
-			b.WriteString("\r\n")
-			writeBodyWithTrailingCRLF(&b, htmlBody)
-			return b.Bytes(), nil
-		default:
-			writeHeader(&b, "Content-Type", "text/plain; charset=\"utf-8\"")
-			writeHeader(&b, "Content-Transfer-Encoding", "quoted-printable")
-			b.WriteString("\r\n")
-			writeQuotedPrintableBody(&b, plainBody)
-			return b.Bytes(), nil
+		for _, attachment := range regularAttachments {
+			fmt.Fprintf(&b, "\r\n--%s\r\n", mixedBoundary)
+			if err := writeAttachmentEntity(&b, attachment); err != nil {
+				return nil, err
+			}
+		}
+		fmt.Fprintf(&b, "--%s--\r\n", mixedBoundary)
+	}
+	return b.Bytes(), nil
+}
+
+func splitInlineAttachments(attachments []mailAttachment) (inline, regular []mailAttachment) {
+	for _, attachment := range attachments {
+		if attachment.Inline {
+			inline = append(inline, attachment)
+		} else {
+			regular = append(regular, attachment)
 		}
 	}
+	return inline, regular
+}
 
-	mixedBoundary, err := randomBoundary()
-	if err != nil {
-		return nil, err
-	}
-
-	writeHeader(&b, "Content-Type", fmt.Sprintf("multipart/mixed; boundary=%q", mixedBoundary))
-	b.WriteString("\r\n")
-
-	// Body part
-	fmt.Fprintf(&b, "--%s\r\n", mixedBoundary)
+func writeBodyEntity(b *bytes.Buffer, plainBody, htmlBody string, hasPlain, hasHTML bool) error {
 	switch {
 	case hasPlain && hasHTML:
 		altBoundary, err := randomBoundary()
 		if err != nil {
-			return nil, err
+			return err
 		}
-		fmt.Fprintf(&b, "Content-Type: multipart/alternative; boundary=%q\r\n\r\n", altBoundary)
-		writeTextPart(&b, altBoundary, "text/plain; charset=\"utf-8\"", plainBody)
-		writeTextPart(&b, altBoundary, "text/html; charset=\"utf-8\"", htmlBody)
-		fmt.Fprintf(&b, "--%s--\r\n", altBoundary)
-	case hasHTML && !hasPlain:
+		fmt.Fprintf(b, "Content-Type: multipart/alternative; boundary=%q\r\n\r\n", altBoundary)
+		writeTextPart(b, altBoundary, "text/plain; charset=\"utf-8\"", plainBody)
+		writeTextPart(b, altBoundary, "text/html; charset=\"utf-8\"", htmlBody)
+		fmt.Fprintf(b, "--%s--\r\n", altBoundary)
+	case hasHTML:
 		b.WriteString("Content-Type: text/html; charset=\"utf-8\"\r\n")
-		fmt.Fprintf(&b, "Content-Transfer-Encoding: %s\r\n\r\n", textTransferEncoding(htmlBody))
-		writeBodyWithTrailingCRLF(&b, htmlBody)
+		fmt.Fprintf(b, "Content-Transfer-Encoding: %s\r\n\r\n", textTransferEncoding(htmlBody))
+		writeBodyWithTrailingCRLF(b, htmlBody)
 	default:
 		b.WriteString("Content-Type: text/plain; charset=\"utf-8\"\r\n")
 		b.WriteString("Content-Transfer-Encoding: quoted-printable\r\n\r\n")
-		writeQuotedPrintableBody(&b, plainBody)
+		writeQuotedPrintableBody(b, plainBody)
 	}
+	return nil
+}
 
-	// Attachments
-	for _, a := range attachments {
-		fmt.Fprintf(&b, "\r\n--%s\r\n", mixedBoundary)
-		fmt.Fprintf(&b, "Content-Type: %s\r\n", a.MIMEType)
-		b.WriteString("Content-Transfer-Encoding: base64\r\n")
-		fmt.Fprintf(&b, "Content-Disposition: attachment; %s\r\n\r\n", contentDispositionFilename(a.Filename))
-		b.WriteString(wrapBase64(a.Data))
-		b.WriteString("\r\n")
+func writeRelatedEntity(b *bytes.Buffer, plainBody, htmlBody string, hasPlain, hasHTML bool, inline []mailAttachment) error {
+	relatedBoundary, err := randomBoundary()
+	if err != nil {
+		return err
 	}
+	fmt.Fprintf(
+		b,
+		"Content-Type: multipart/related; boundary=%q; type=%q\r\n\r\n",
+		relatedBoundary,
+		relatedRootMIMEType(hasPlain, hasHTML),
+	)
+	fmt.Fprintf(b, "--%s\r\n", relatedBoundary)
+	if err := writeBodyEntity(b, plainBody, htmlBody, hasPlain, hasHTML); err != nil {
+		return err
+	}
+	for _, attachment := range inline {
+		fmt.Fprintf(b, "\r\n--%s\r\n", relatedBoundary)
+		if err := writeAttachmentEntity(b, attachment); err != nil {
+			return err
+		}
+	}
+	fmt.Fprintf(b, "--%s--\r\n", relatedBoundary)
+	return nil
+}
 
-	fmt.Fprintf(&b, "--%s--\r\n", mixedBoundary)
-	return b.Bytes(), nil
+func relatedRootMIMEType(hasPlain, hasHTML bool) string {
+	if hasPlain && hasHTML {
+		return "multipart/alternative"
+	}
+	if hasHTML {
+		return "text/html"
+	}
+	return mimeTextPlain
+}
+
+func writeAttachmentEntity(b *bytes.Buffer, attachment mailAttachment) error {
+	fmt.Fprintf(b, "Content-Type: %s\r\n", attachment.MIMEType)
+	b.WriteString("Content-Transfer-Encoding: base64\r\n")
+	if attachment.Inline {
+		contentID := normalizeContentID(attachment.ContentID)
+		if contentID == "" {
+			return errors.New("inline attachment missing Content-ID")
+		}
+		if err := validateHeaderValue(contentID); err != nil {
+			return fmt.Errorf("invalid Content-ID: %w", err)
+		}
+		fmt.Fprintf(b, "Content-ID: <%s>\r\n", contentID)
+		if location := strings.TrimSpace(attachment.ContentLocation); location != "" {
+			if err := validateHeaderValue(location); err != nil {
+				return fmt.Errorf("invalid Content-Location: %w", err)
+			}
+			fmt.Fprintf(b, "Content-Location: %s\r\n", location)
+		}
+		fmt.Fprintf(b, "Content-Disposition: inline; %s\r\n\r\n", contentDispositionFilename(attachment.Filename))
+	} else {
+		fmt.Fprintf(b, "Content-Disposition: attachment; %s\r\n\r\n", contentDispositionFilename(attachment.Filename))
+	}
+	b.WriteString(wrapBase64(attachment.Data))
+	b.WriteString("\r\n")
+	return nil
 }
 
 func prepareMailAttachments(attachments []mailAttachment) ([]mailAttachment, []mailAttachmentMetadata, error) {

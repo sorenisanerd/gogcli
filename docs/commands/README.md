@@ -2,7 +2,7 @@
 
 Every `gog` command has a generated docs page. The source of truth is the live CLI schema; run `make docs-commands` after changing command names, flags, help text, aliases, or arguments.
 
-Generated pages: 642.
+Generated pages: 644.
 
 ## Top-level Commands
 
@@ -449,6 +449,8 @@ Generated pages: 642.
       - [gog gmail messages modify](gog-gmail-messages-modify.md) - Modify labels on a single message
       - [gog gmail messages search](gog-gmail-messages-search.md) - Search messages using Gmail query syntax
     - [gog gmail raw](gog-gmail-raw.md) - Dump raw Gmail API response as JSON (Users.Messages.Get; lossless; for scripting and LLM consumption)
+    - [gog gmail reply](gog-gmail-reply.md) - Reply to a message
+    - [gog gmail reply-all](gog-gmail-reply-all.md) - Reply to all message participants
     - [gog gmail search](gog-gmail-search.md) - Search threads using Gmail query syntax
     - [gog gmail send](gog-gmail-send.md) - Send an email
     - [gog gmail settings](gog-gmail-settings.md) - Settings and admin

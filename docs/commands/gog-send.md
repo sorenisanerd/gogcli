@@ -50,7 +50,7 @@ gog send [flags]
 | `--signature` | `bool` |  | Append the Gmail signature from the active send-as address |
 | `--signature-file` | `string` |  | Append a local signature file (plain text or HTML) |
 | `--signature-from` | `string` |  | Append the Gmail signature from this send-as email address |
-| `--subject` | `string` |  | Subject (required) |
+| `--subject` | `string` |  | Subject (required unless replying; inherited with Re: for replies) |
 | `--thread-id` | `string` |  | Reply within a Gmail thread (uses latest message for headers) |
 | `--to` | `string` |  | Recipients (comma-separated; required unless --reply-all is used) |
 | `--track` | `bool` |  | Enable open tracking (requires tracking setup) |

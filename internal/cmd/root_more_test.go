@@ -352,6 +352,8 @@ func TestGmailNoSendBlocksBeforeAuth(t *testing.T) {
 	setTestConfigHome(t)
 	tests := [][]string{
 		{"--gmail-no-send", "gmail", "send", "--to", "a@example.com", "--subject", "S", "--body", "B"},
+		{"--gmail-no-send", "gmail", "reply", "msg-1", "--body", "B"},
+		{"--gmail-no-send", "gmail", "reply-all", "msg-1", "--body", "B"},
 		{"--gmail-no-send", "gmail", "autoreply", "from:a@example.com", "--subject", "S", "--body", "B"},
 		{"--gmail-no-send", "gmail", "forward", "msg-1", "--to", "a@example.com"},
 		{"--gmail-no-send", "gmail", "fwd", "msg-1", "--to", "a@example.com"},

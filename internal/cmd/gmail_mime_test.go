@@ -128,6 +128,41 @@ func TestBuildRFC822AlternativeWithAttachment(t *testing.T) {
 	}
 }
 
+func TestBuildRFC822WithInlineResource(t *testing.T) {
+	raw, err := buildRFC822(mailOptions{
+		From:     "a@b.com",
+		To:       []string{"c@d.com"},
+		Subject:  "Hi",
+		Body:     "Plain",
+		BodyHTML: `<p>HTML<img src="cid:image@example.com"></p>`,
+		Attachments: []mailAttachment{
+			{
+				Filename:  "inline.png",
+				MIMEType:  "image/png",
+				Data:      []byte("png"),
+				DataSet:   true,
+				Inline:    true,
+				ContentID: "image@example.com",
+			},
+		},
+	}, nil)
+	if err != nil {
+		t.Fatalf("buildRFC822: %v", err)
+	}
+	s := string(raw)
+	for _, want := range []string{
+		"multipart/related",
+		"multipart/alternative",
+		"Content-ID: <image@example.com>",
+		`Content-Disposition: inline; filename="inline.png"`,
+		`cid:image@example.com`,
+	} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("missing %q:\n%s", want, s)
+		}
+	}
+}
+
 func TestPrepareMailAttachments(t *testing.T) {
 	dir := t.TempDir()
 	payloadPath := filepath.Join(dir, "report.txt")

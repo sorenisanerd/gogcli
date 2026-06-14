@@ -1,13 +1,13 @@
-# `gog gmail send`
+# `gog gmail reply`
 
 > Generated from `gog schema --json`. Do not edit this page by hand; run `make docs-commands`.
 
-Send an email
+Reply to a message
 
 ## Usage
 
 ```bash
-gog gmail (mail,email) send [flags]
+gog gmail (mail,email) reply <messageId> [flags]
 ```
 
 ## Parent
@@ -21,12 +21,12 @@ gog gmail (mail,email) send [flags]
 | `--access-token` | `string` |  | Use provided access token directly (bypasses stored refresh tokens; token expires in ~1h) |
 | `-a`<br>`--account`<br>`--acct` | `string` |  | Account email, alias, or auto for authenticated Google API commands |
 | `--attach` | `[]string` |  | Attachment file path (repeatable) |
-| `--bcc` | `string` |  | BCC recipients (comma-separated) |
+| `--bcc` | `[]string` |  | Add or move recipients to Bcc (repeatable) |
 | `--body` | `string` |  | Body (plain text; required unless --body-html is set) |
 | `--body-file` | `string` |  | Body file path (plain text; '-' for stdin) |
 | `--body-html` | `string` |  | Body (HTML; optional) |
 | `--body-html-file` | `string` |  | HTML body file path ('-' for stdin) |
-| `--cc` | `string` |  | CC recipients (comma-separated) |
+| `--cc` | `[]string` |  | Add or move recipients to Cc (repeatable) |
 | `--client` | `string` |  | OAuth client name (selects stored credentials + token bucket) |
 | `--color` | `string` | auto | Color output: auto\|always\|never |
 | `--disable-commands` | `string` |  | Comma-separated list of disabled commands; dot paths allowed |
@@ -40,21 +40,16 @@ gog gmail (mail,email) send [flags]
 | `--home` | `string` |  | Override gogcli config/data/state/cache root (equivalent to GOG_HOME) |
 | `-j`<br>`--json`<br>`--machine` | `bool` | false | Output JSON to stdout (best for scripting) |
 | `--no-input`<br>`--non-interactive`<br>`--noninteractive` | `bool` |  | Never prompt; fail instead (useful for CI) |
+| `--no-quote` | `bool` |  | Do not include the original message below the reply |
 | `-p`<br>`--plain`<br>`--tsv` | `bool` | false | Output stable, parseable text to stdout (TSV; no colors) |
-| `--quote` | `bool` |  | Include quoted original message in reply (requires --reply-to-message-id or --thread-id) |
-| `--reply-all` | `bool` |  | Auto-populate recipients from original message (requires --reply-to-message-id or --thread-id) |
-| `--reply-to` | `string` |  | Reply-To header address |
-| `--reply-to-message-id`<br>`--in-reply-to` | `string` |  | Reply to Gmail message ID (sets In-Reply-To/References and thread) |
+| `--remove` | `[]string` |  | Remove recipients from all fields (repeatable) |
 | `--results-only` | `bool` |  | In JSON mode, emit only the primary result (drops envelope fields like nextPageToken) |
 | `--select`<br>`--pick`<br>`--project` | `string` |  | In JSON mode, select comma-separated fields (best-effort; supports dot paths). Desire path: use --fields for most commands. |
 | `--signature` | `bool` |  | Append the Gmail signature from the active send-as address |
 | `--signature-file` | `string` |  | Append a local signature file (plain text or HTML) |
 | `--signature-from` | `string` |  | Append the Gmail signature from this send-as email address |
-| `--subject` | `string` |  | Subject (required unless replying; inherited with Re: for replies) |
-| `--thread-id` | `string` |  | Reply within a Gmail thread (uses latest message for headers) |
-| `--to` | `string` |  | Recipients (comma-separated; required unless --reply-all is used) |
-| `--track` | `bool` |  | Enable open tracking (requires tracking setup) |
-| `--track-split` | `bool` |  | Send tracked messages separately per recipient |
+| `--subject` | `string` |  | Override reply subject (a changed subject starts a new Gmail thread) |
+| `--to` | `[]string` |  | Add or move recipients to To (repeatable) |
 | `-v`<br>`--verbose` | `bool` |  | Enable verbose logging |
 | `--version` | `kong.VersionFlag` |  | Print version and exit |
 | `--wrap-untrusted` | `bool` | false | In JSON/raw output, wrap fetched text fields in external untrusted-content markers |

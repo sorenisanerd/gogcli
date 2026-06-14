@@ -164,6 +164,19 @@ For larger Sheets writes, prefer `sheets batch-update` over loops of
 `sheets update`; it sends multiple value ranges in one Sheets API request and
 accepts inline JSON or `@file` input.
 
+For normal Gmail replies, use the first-class commands instead of rebuilding
+reply MIME through `gmail send`:
+
+```bash
+gog --account user@example.com gmail reply <messageId> --body-file reply.txt
+gog --account user@example.com gmail reply-all <messageId> --body-file reply.txt \
+  --bcc introducer@example.com --remove former-participant@example.com
+```
+
+They inherit the subject, quote by default, preserve display names and inline
+images, and treat `--to`/`--cc`/`--bcc` as additive placement or moves. Use
+`--no-quote` to omit the original.
+
 ## Discovery
 
 Use generated command docs and schema instead of guessing flags:

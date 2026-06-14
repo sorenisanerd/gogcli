@@ -28,6 +28,8 @@ gog gmail (mail,email) <command> [flags]
 - [gog gmail mark-read](gog-gmail-mark-read.md) - Mark messages as read
 - [gog gmail messages](gog-gmail-messages.md) - Message operations
 - [gog gmail raw](gog-gmail-raw.md) - Dump raw Gmail API response as JSON (Users.Messages.Get; lossless; for scripting and LLM consumption)
+- [gog gmail reply](gog-gmail-reply.md) - Reply to a message
+- [gog gmail reply-all](gog-gmail-reply-all.md) - Reply to all message participants
 - [gog gmail search](gog-gmail-search.md) - Search threads using Gmail query syntax
 - [gog gmail send](gog-gmail-send.md) - Send an email
 - [gog gmail settings](gog-gmail-settings.md) - Settings and admin

@@ -398,6 +398,8 @@ Generated from `gog schema --json`.
       - [`gog gmail (mail,email) messages (message,msg,msgs) modify (update,edit,set) <messageId> [flags]`](commands/gog-gmail-messages-modify.md) - Modify labels on a single message
       - [`gog gmail (mail,email) messages (message,msg,msgs) search (find,query,ls,list) <query> ... [flags]`](commands/gog-gmail-messages-search.md) - Search messages using Gmail query syntax
     - [`gog gmail (mail,email) raw <messageId> [flags]`](commands/gog-gmail-raw.md) - Dump raw Gmail API response as JSON (Users.Messages.Get; lossless; for scripting and LLM consumption)
+    - [`gog gmail (mail,email) reply <messageId> [flags]`](commands/gog-gmail-reply.md) - Reply to a message
+    - [`gog gmail (mail,email) reply-all (replyall) <messageId> [flags]`](commands/gog-gmail-reply-all.md) - Reply to all message participants
     - [`gog gmail (mail,email) search (find,query,ls,list) <query> ... [flags]`](commands/gog-gmail-search.md) - Search threads using Gmail query syntax
     - [`gog gmail (mail,email) send [flags]`](commands/gog-gmail-send.md) - Send an email
     - [`gog gmail (mail,email) settings <command>`](commands/gog-gmail-settings.md) - Settings and admin

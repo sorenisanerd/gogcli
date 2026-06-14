@@ -66,6 +66,59 @@ For account-specific send blocking, use the no-send config commands:
 - [`gog config no-send list`](commands/gog-config-no-send-list.md)
 - [`gog config no-send remove`](commands/gog-config-no-send-remove.md)
 
+## Reply and Reply All
+
+The Gmail API has no reply method. Clients fetch the original message, build a
+complete RFC MIME message, and call `messages.send`. Use the first-class reply
+commands so gog owns that composition work:
+
+```bash
+gog gmail reply <messageId> --body-file reply.txt
+gog gmail reply-all <messageId> --body-file reply.txt \
+  --bcc '"Introducer" <introducer@example.com>'
+```
+
+Reply defaults match normal Gmail composition:
+
+- The original subject is inherited with one `Re:` prefix.
+- The original message is quoted; use `--no-quote` to omit it.
+- `reply` targets `Reply-To` when present, otherwise `From`.
+- `reply-all` also carries forward original To/Cc recipients while excluding
+  the active account and its send-as aliases.
+- Display names are preserved.
+- CID-backed inline images referenced by quoted HTML are fetched and rebuilt
+  as `multipart/related`. If a referenced MIME part is missing, the command
+  fails instead of sending broken images.
+
+Recipient flags modify the derived recipient set. `--to`, `--cc`, and `--bcc`
+are additive; naming an inherited recipient in a different field moves it
+there. Repeat `--remove` to subtract recipients from every field:
+
+```bash
+gog gmail reply-all <messageId> --body "Thanks all" \
+  --bcc introducer@example.com \
+  --remove former-participant@example.com
+```
+
+An explicit `--subject` override is supported. A changed subject cannot meet
+Gmail's thread-matching requirement, so gog keeps the RFC reply headers but
+does not force the original `threadId`; Gmail creates a new conversation.
+
+Remote HTTP images remain remote references. Only MIME parts referenced with
+`cid:` are copied into the outgoing message.
+
+`gmail send --reply-to-message-id` remains available as lower-level
+composition. It now inherits an omitted subject, but its explicit `--to` and
+`--cc` values retain replacement semantics and quoting remains opt-in. Prefer
+`gmail reply` or `gmail reply-all` for ordinary replies.
+
+Official behavior references:
+
+- [Gmail API: Manage threads](https://developers.google.com/workspace/gmail/api/guides/threads)
+- [Gmail API: Create and send messages](https://developers.google.com/workspace/gmail/api/guides/sending)
+- [RFC 2387: multipart/related](https://www.rfc-editor.org/rfc/rfc2387.html)
+- [RFC 2392: Content-ID URLs](https://www.rfc-editor.org/rfc/rfc2392)
+
 ## Attachment Confirmation
 
 `gmail send --json` and `gmail drafts create|update --json` include an

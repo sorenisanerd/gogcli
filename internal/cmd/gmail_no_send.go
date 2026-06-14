@@ -12,6 +12,9 @@ import (
 var gmailSendCommandPaths = map[string]struct{}{
 	"send":              {},
 	"gmail.send":        {},
+	"gmail.reply":       {},
+	"gmail.reply-all":   {},
+	"gmail.replyall":    {},
 	"gmail.autoreply":   {},
 	"gmail.forward":     {},
 	"gmail.fwd":         {},
