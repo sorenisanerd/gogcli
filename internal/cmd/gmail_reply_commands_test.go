@@ -42,6 +42,46 @@ func TestBuildReplyRecipientsPreservesNamesAndMovesRecipients(t *testing.T) {
 	}
 }
 
+func TestBuildReplyRecipientsOnlyFallsBackForSelfSentMessages(t *testing.T) {
+	selfEmails := []string{"me@example.com", "alias@example.com"}
+
+	selfSent, err := buildReplyRecipients(
+		&replyInfo{
+			FromAddr: `"Me Person" <me@example.com>`,
+			ToHeader: `"Recipient" <recipient@example.com>`,
+		},
+		selfEmails,
+		false,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("self-sent buildReplyRecipients: %v", err)
+	}
+	if got := formatMailboxes(selfSent.To); len(got) != 1 || got[0] != `"Recipient" <recipient@example.com>` {
+		t.Fatalf("self-sent To = %#v", got)
+	}
+
+	_, err = buildReplyRecipients(
+		&replyInfo{
+			FromAddr:    `"External Sender" <sender@example.com>`,
+			ReplyToAddr: `"Me Person" <me@example.com>`,
+			ToHeader:    `"Unrelated Recipient" <recipient@example.com>`,
+		},
+		selfEmails,
+		false,
+		nil,
+		nil,
+		nil,
+		nil,
+	)
+	if err == nil || !strings.Contains(err.Error(), "reply has no recipients") {
+		t.Fatalf("external sender with self Reply-To error = %v", err)
+	}
+}
+
 func TestParseMailboxValuesPreservesCommaInDisplayName(t *testing.T) {
 	addrs, err := parseMailboxValues("--to", []string{`"Bourgon, Malo" <malo@example.com>`})
 	if err != nil {

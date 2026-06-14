@@ -35,7 +35,7 @@ func buildReplyRecipients(info *replyInfo, selfEmails []string, replyAll bool, e
 	if replyAll {
 		out.To = appendMailboxes(out.To, parseMailboxHeader(replyToHeader(info)), self)
 		out.Cc = appendMailboxes(out.Cc, parseMailboxHeader(replyCcHeader(info)), self)
-	} else if len(out.To) == 0 {
+	} else if len(out.To) == 0 && containsMailbox(parseMailboxHeader(info.FromAddr), self) {
 		// Replying to a message sent by the active account targets its original
 		// To recipients instead of producing an empty recipient list.
 		out.To = appendMailboxes(out.To, parseMailboxHeader(replyToHeader(info)), self)
@@ -80,6 +80,15 @@ func buildReplyRecipients(info *replyInfo, selfEmails []string, replyAll bool, e
 		return replyRecipients{}, usage("reply has no recipients after applying recipient changes")
 	}
 	return out, nil
+}
+
+func containsMailbox(addrs []mail.Address, candidates map[string]struct{}) bool {
+	for _, addr := range addrs {
+		if _, ok := candidates[canonicalEmail(addr.Address)]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 func parseExplicitRecipientFields(to, cc, bcc []string) (replyRecipients, error) {
