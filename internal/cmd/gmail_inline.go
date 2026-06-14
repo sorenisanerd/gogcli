@@ -11,6 +11,7 @@ import (
 	nethtml "golang.org/x/net/html"
 	"google.golang.org/api/gmail/v1"
 
+	"github.com/steipete/gogcli/internal/gmailcontent"
 	"github.com/steipete/gogcli/internal/mailmime"
 )
 
@@ -220,7 +221,7 @@ func mailAttachmentFromMessagePart(ctx context.Context, svc *gmail.Service, mess
 	case strings.TrimSpace(part.Body.AttachmentId) != "":
 		data, err = fetchAttachmentBytes(ctx, svc, messageID, part.Body.AttachmentId)
 	case part.Body.Data != "":
-		data, err = decodeBase64URLBytes(part.Body.Data)
+		data, err = gmailcontent.DecodeBase64URLBytes(part.Body.Data)
 	case part.Body.Size == 0:
 		data = []byte{}
 	default:
