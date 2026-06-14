@@ -133,7 +133,7 @@ func htmlToPlainText(value string) string {
 				return
 			}
 			switch strings.ToLower(n.Data) {
-			case "head", "style", "script", "template", "noscript", literalTitle:
+			case "head", literalStyle, "script", "template", "noscript", literalTitle:
 				return
 			case "br":
 				writeHTMLNewline(&out)
@@ -176,7 +176,7 @@ func hiddenHTMLElement(n *nethtml.Node) bool {
 			if strings.EqualFold(n.Data, "input") && strings.EqualFold(strings.TrimSpace(attr.Val), "hidden") {
 				return true
 			}
-		case "style":
+		case literalStyle:
 			if hiddenInlineStyle(attr.Val) {
 				return true
 			}

@@ -24,6 +24,7 @@ var (
 	errRandomSourceRequired     = errors.New("random source is required")
 	errAttachmentReaderRequired = errors.New("attachment file reader is required")
 	errHeaderValueNewline       = errors.New("header value contains newline")
+	errInlineContentIDRequired  = errors.New("inline attachment missing Content-ID")
 )
 
 // Attachment describes an RFC822 attachment from bytes or a file path.
@@ -203,6 +204,7 @@ func BuildRFC822(opts Options, cfg Config) ([]byte, error) {
 		b.WriteString("\r\n")
 
 		fmt.Fprintf(&b, "--%s\r\n", mixedBoundary)
+
 		if len(inlineAttachments) > 0 {
 			if err := writeRelatedEntity(&b, plainBody, htmlBody, hasPlain, hasHTML, inlineAttachments, cfg.Random); err != nil {
 				return nil, err
@@ -213,10 +215,12 @@ func BuildRFC822(opts Options, cfg Config) ([]byte, error) {
 
 		for _, attachment := range regularAttachments {
 			fmt.Fprintf(&b, "\r\n--%s\r\n", mixedBoundary)
+
 			if err := writeAttachmentEntity(&b, attachment); err != nil {
 				return nil, err
 			}
 		}
+
 		fmt.Fprintf(&b, "--%s--\r\n", mixedBoundary)
 	}
 
@@ -273,15 +277,19 @@ func writeRelatedEntity(b *bytes.Buffer, plainBody, htmlBody string, hasPlain, h
 		relatedRootMIMEType(hasPlain, hasHTML),
 	)
 	fmt.Fprintf(b, "--%s\r\n", relatedBoundary)
+
 	if err := writeBodyEntity(b, plainBody, htmlBody, hasPlain, hasHTML, random); err != nil {
 		return err
 	}
+
 	for _, attachment := range inline {
 		fmt.Fprintf(b, "\r\n--%s\r\n", relatedBoundary)
+
 		if err := writeAttachmentEntity(b, attachment); err != nil {
 			return err
 		}
 	}
+
 	fmt.Fprintf(b, "--%s--\r\n", relatedBoundary)
 
 	return nil
@@ -291,34 +299,44 @@ func relatedRootMIMEType(hasPlain, hasHTML bool) string {
 	if hasPlain && hasHTML {
 		return "multipart/alternative"
 	}
+
 	if hasHTML {
 		return "text/html"
 	}
+
 	return "text/plain"
 }
 
 func writeAttachmentEntity(b *bytes.Buffer, attachment Attachment) error {
 	fmt.Fprintf(b, "Content-Type: %s\r\n", attachment.MIMEType)
 	b.WriteString("Content-Transfer-Encoding: base64\r\n")
+
 	if attachment.Inline {
 		contentID := normalizeContentID(attachment.ContentID)
+
 		if contentID == "" {
-			return errors.New("inline attachment missing Content-ID")
+			return errInlineContentIDRequired
 		}
+
 		if err := ValidateHeaderValue(contentID); err != nil {
 			return fmt.Errorf("invalid Content-ID: %w", err)
 		}
+
 		fmt.Fprintf(b, "Content-ID: <%s>\r\n", contentID)
+
 		if location := strings.TrimSpace(attachment.ContentLocation); location != "" {
 			if err := ValidateHeaderValue(location); err != nil {
 				return fmt.Errorf("invalid Content-Location: %w", err)
 			}
+
 			fmt.Fprintf(b, "Content-Location: %s\r\n", location)
 		}
+
 		fmt.Fprintf(b, "Content-Disposition: inline; %s\r\n\r\n", contentDispositionFilename(attachment.Filename))
 	} else {
 		fmt.Fprintf(b, "Content-Disposition: attachment; %s\r\n\r\n", contentDispositionFilename(attachment.Filename))
 	}
+
 	b.WriteString(wrapBase64(attachment.Data))
 	b.WriteString("\r\n")
 

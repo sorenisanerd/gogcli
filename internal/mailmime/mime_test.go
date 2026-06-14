@@ -164,6 +164,7 @@ func TestBuildRFC822WithInlineResource(t *testing.T) {
 	if err != nil {
 		t.Fatalf("buildRFC822: %v", err)
 	}
+
 	s := string(raw)
 	for _, want := range []string{
 		"multipart/related",

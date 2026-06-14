@@ -10,6 +10,7 @@ const (
 	literalAuto    = "auto"
 	literalDefault = "default"
 	literalError   = "error"
+	literalStyle   = "style"
 	literalTitle   = "title"
 	literalWindows = "windows"
 

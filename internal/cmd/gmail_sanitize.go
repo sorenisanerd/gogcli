@@ -67,7 +67,7 @@ func extractSanitizedHTMLText(value string) string {
 		case html.StartTagToken, html.SelfClosingTagToken:
 			name, _ := tokenizer.TagName()
 			tag := strings.ToLower(string(name))
-			if tag == "script" || tag == "style" {
+			if tag == "script" || tag == literalStyle {
 				skipDepth++
 			}
 			if sanitizeBlockTags[tag] {
@@ -76,7 +76,7 @@ func extractSanitizedHTMLText(value string) string {
 		case html.EndTagToken:
 			name, _ := tokenizer.TagName()
 			tag := strings.ToLower(string(name))
-			if (tag == "script" || tag == "style") && skipDepth > 0 {
+			if (tag == "script" || tag == literalStyle) && skipDepth > 0 {
 				skipDepth--
 			}
 			if sanitizeBlockTags[tag] {
