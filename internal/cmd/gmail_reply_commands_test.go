@@ -299,7 +299,8 @@ func TestPreserveReferencedInlineResourcesRejectsBrokenCID(t *testing.T) {
 
 func TestReferencedContentIDsOnlyScansResourceReferences(t *testing.T) {
 	htmlBody := `<p>Literal <code>cid:not-a-resource</code></p>
-<img src="cid:image-1%40example.com" srcset="cid:image-2@example.com 2x">
+<a href="https://example.test/?q=cid:not-a-resource">Link</a>
+<img src="cid:image-1%40example.com" srcset="https://example.test/?q=cid:not-a-resource 1x, cid:image-2@example.com 2x">
 <div style="background-image: url('cid:image-3@example.com')"></div>
 <style>.hero { background: url(cid:image-4@example.com) }</style>`
 

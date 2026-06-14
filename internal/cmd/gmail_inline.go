@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	cidReferencePattern    = regexp.MustCompile(`(?i)cid:([^"'[:space:]<>\),]+)`)
-	cidCSSReferencePattern = regexp.MustCompile(`(?i)url\(\s*['"]?cid:([^"'[:space:]<>\)]+)['"]?\s*\)`)
+	cidSrcsetReferencePattern = regexp.MustCompile(`(?i)(?:^|,)\s*cid:([^"'[:space:]<>\),]+)`)
+	cidCSSReferencePattern    = regexp.MustCompile(`(?i)url\(\s*['"]?cid:([^"'[:space:]<>\)]+)['"]?\s*\)`)
 )
 
 var cidURLAttributes = map[string]struct{}{
@@ -115,7 +115,7 @@ func referencedContentIDs(htmlBody string) []string {
 				case name == "style":
 					candidates = append(candidates, contentIDsFromMatches(cidCSSReferencePattern.FindAllStringSubmatch(attr.Val, -1))...)
 				case isCIDURLAttribute(attr):
-					candidates = append(candidates, contentIDsFromMatches(cidReferencePattern.FindAllStringSubmatch(attr.Val, -1))...)
+					candidates = append(candidates, contentIDsFromURLAttribute(attr)...)
 				}
 			}
 			if strings.EqualFold(node.Data, "style") {
@@ -163,13 +163,28 @@ func contentIDsFromMatches(matches [][]string) []string {
 	return out
 }
 
+func contentIDsFromURLAttribute(attr nethtml.Attribute) []string {
+	value := strings.TrimSpace(attr.Val)
+	if cidURLAttributeName(attr) == "srcset" {
+		return contentIDsFromMatches(cidSrcsetReferencePattern.FindAllStringSubmatch(value, -1))
+	}
+	if len(value) < len("cid:") || !strings.EqualFold(value[:len("cid:")], "cid:") {
+		return nil
+	}
+	return []string{strings.TrimSpace(value[len("cid:"):])}
+}
+
 func isCIDURLAttribute(attr nethtml.Attribute) bool {
+	_, ok := cidURLAttributes[cidURLAttributeName(attr)]
+	return ok
+}
+
+func cidURLAttributeName(attr nethtml.Attribute) string {
 	name := strings.ToLower(attr.Key)
 	if attr.Namespace != "" {
 		name = strings.ToLower(attr.Namespace) + ":" + name
 	}
-	_, ok := cidURLAttributes[name]
-	return ok
+	return name
 }
 
 func indexMessagePartsByContentID(payload *gmail.MessagePart) map[string]*gmail.MessagePart {
