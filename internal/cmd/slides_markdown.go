@@ -109,7 +109,7 @@ func inlinesToText(inlines []Inline) string {
 
 func layoutSkipsTitleHoist(layout string) bool {
 	switch layout {
-	case slideyLayoutTitle, "hero", "statement":
+	case literalTitle, "hero", "statement":
 		return true
 	}
 	return false

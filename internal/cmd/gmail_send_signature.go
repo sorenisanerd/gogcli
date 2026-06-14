@@ -55,7 +55,7 @@ func (c *GmailSendCmd) resolveComposeSignature(ctx context.Context, svc *gmail.S
 	}
 	htmlSignature := strings.TrimSpace(sendAs.Signature)
 	return composeSignature{
-		Plain: signatureHTMLToText(htmlSignature),
+		Plain: htmlToPlainText(htmlSignature),
 		HTML:  htmlSignature,
 	}, email, nil
 }
@@ -84,7 +84,7 @@ func readComposeSignatureFile(path string) (composeSignature, error) {
 	}
 	if looksLikeHTML(value) {
 		return composeSignature{
-			Plain: signatureHTMLToText(value),
+			Plain: htmlToPlainText(value),
 			HTML:  value,
 		}, nil
 	}
@@ -109,7 +109,7 @@ func appendBodyBlock(body, block string) string {
 	return body + "\n\n" + block
 }
 
-func signatureHTMLToText(value string) string {
+func htmlToPlainText(value string) string {
 	value = strings.TrimSpace(value)
 	if value == "" {
 		return ""
@@ -130,15 +130,17 @@ func signatureHTMLToText(value string) string {
 			out.WriteString(n.Data)
 		case nethtml.ElementNode:
 			switch strings.ToLower(n.Data) {
+			case "head", "style", "script", "template", "noscript", literalTitle:
+				return
 			case "br":
-				writeSignatureNewline(&out)
+				writeHTMLNewline(&out)
 				return
 			case "div", "p", "li":
-				writeSignatureNewline(&out)
+				writeHTMLNewline(&out)
 				for child := n.FirstChild; child != nil; child = child.NextSibling {
 					walk(child)
 				}
-				writeSignatureNewline(&out)
+				writeHTMLNewline(&out)
 				return
 			}
 		}
@@ -158,7 +160,7 @@ func signatureHTMLToText(value string) string {
 	return strings.Join(kept, "\n")
 }
 
-func writeSignatureNewline(out *strings.Builder) {
+func writeHTMLNewline(out *strings.Builder) {
 	if out.Len() == 0 {
 		return
 	}

@@ -263,9 +263,19 @@ func applyQuoteToBodies(plainBody string, htmlBody string, quote bool, info *rep
 	}
 
 	userPlain := plainBody
-	outPlain := plainBody
-	if info.Body != "" {
-		outPlain += formatQuotedMessage(info.FromAddr, info.Date, info.Body)
+	hasHTMLReply := strings.TrimSpace(htmlBody) != ""
+	if strings.TrimSpace(userPlain) == "" && hasHTMLReply {
+		userPlain = htmlToPlainText(htmlBody)
+	}
+
+	quotedPlain := info.Body
+	if strings.TrimSpace(quotedPlain) == "" && strings.TrimSpace(info.BodyHTML) != "" {
+		quotedPlain = htmlToPlainText(info.BodyHTML)
+	}
+
+	outPlain := userPlain
+	if quotedPlain != "" && (!hasHTMLReply || strings.TrimSpace(userPlain) != "") {
+		outPlain += formatQuotedMessage(info.FromAddr, info.Date, quotedPlain)
 	}
 
 	quoteContent := info.BodyHTML

@@ -11,15 +11,13 @@ const (
 	LayoutKindThreeCols
 )
 
-const slideyLayoutTitle = "title"
-
 // MapSlideyLayout maps a slidey frontmatter layout name to a LayoutKind.
 // Unknown values fall back to LayoutKindDefault.
 func MapSlideyLayout(name string) LayoutKind {
 	switch name {
 	case "center":
 		return LayoutKindCenter
-	case slideyLayoutTitle, "hero", "statement":
+	case literalTitle, "hero", "statement":
 		return LayoutKindSectionHeader
 	case "two-cols":
 		return LayoutKindTwoCols
