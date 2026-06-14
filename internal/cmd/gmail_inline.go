@@ -8,12 +8,26 @@ import (
 	"regexp"
 	"strings"
 
+	nethtml "golang.org/x/net/html"
 	"google.golang.org/api/gmail/v1"
 
 	"github.com/steipete/gogcli/internal/mailmime"
 )
 
-var cidReferencePattern = regexp.MustCompile(`(?i)cid:([^"'[:space:]<>\)]+)`)
+var (
+	cidReferencePattern    = regexp.MustCompile(`(?i)cid:([^"'[:space:]<>\),]+)`)
+	cidCSSReferencePattern = regexp.MustCompile(`(?i)url\(\s*['"]?cid:([^"'[:space:]<>\)]+)['"]?\s*\)`)
+)
+
+var cidURLAttributes = map[string]struct{}{
+	"background": {},
+	"data":       {},
+	"href":       {},
+	"poster":     {},
+	"src":        {},
+	"srcset":     {},
+	"xlink:href": {},
+}
 
 func preserveReferencedInlineResources(ctx context.Context, svc *gmail.Service, messageID string, payload *gmail.MessagePart, htmlBody string) ([]mailmime.Attachment, error) {
 	references := referencedContentIDs(htmlBody)
@@ -86,15 +100,42 @@ func preserveForwardMessageParts(ctx context.Context, svc *gmail.Service, messag
 }
 
 func referencedContentIDs(htmlBody string) []string {
-	matches := cidReferencePattern.FindAllStringSubmatch(htmlBody, -1)
-	out := make([]string, 0, len(matches))
-	seen := make(map[string]struct{}, len(matches))
-	for _, match := range matches {
-		if len(match) < 2 {
-			continue
+	doc, err := nethtml.Parse(strings.NewReader(htmlBody))
+	if err != nil {
+		return nil
+	}
+
+	var candidates []string
+	var walk func(*nethtml.Node)
+	walk = func(node *nethtml.Node) {
+		if node.Type == nethtml.ElementNode {
+			for _, attr := range node.Attr {
+				name := strings.ToLower(attr.Key)
+				switch {
+				case name == "style":
+					candidates = append(candidates, contentIDsFromMatches(cidCSSReferencePattern.FindAllStringSubmatch(attr.Val, -1))...)
+				case isCIDURLAttribute(attr):
+					candidates = append(candidates, contentIDsFromMatches(cidReferencePattern.FindAllStringSubmatch(attr.Val, -1))...)
+				}
+			}
+			if strings.EqualFold(node.Data, "style") {
+				for child := node.FirstChild; child != nil; child = child.NextSibling {
+					if child.Type == nethtml.TextNode {
+						candidates = append(candidates, contentIDsFromMatches(cidCSSReferencePattern.FindAllStringSubmatch(child.Data, -1))...)
+					}
+				}
+			}
 		}
-		contentID := match[1]
-		if decoded, err := url.PathUnescape(contentID); err == nil {
+		for child := node.FirstChild; child != nil; child = child.NextSibling {
+			walk(child)
+		}
+	}
+	walk(doc)
+
+	out := make([]string, 0, len(candidates))
+	seen := make(map[string]struct{}, len(candidates))
+	for _, contentID := range candidates {
+		if decoded, decodeErr := url.PathUnescape(contentID); decodeErr == nil {
 			contentID = decoded
 		}
 		contentID = normalizeContentID(contentID)
@@ -109,6 +150,26 @@ func referencedContentIDs(htmlBody string) []string {
 		out = append(out, contentID)
 	}
 	return out
+}
+
+func contentIDsFromMatches(matches [][]string) []string {
+	out := make([]string, 0, len(matches))
+	for _, match := range matches {
+		if len(match) < 2 {
+			continue
+		}
+		out = append(out, match[1])
+	}
+	return out
+}
+
+func isCIDURLAttribute(attr nethtml.Attribute) bool {
+	name := strings.ToLower(attr.Key)
+	if attr.Namespace != "" {
+		name = strings.ToLower(attr.Namespace) + ":" + name
+	}
+	_, ok := cidURLAttributes[name]
+	return ok
 }
 
 func indexMessagePartsByContentID(payload *gmail.MessagePart) map[string]*gmail.MessagePart {

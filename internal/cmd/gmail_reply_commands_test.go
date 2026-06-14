@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 
@@ -293,6 +294,38 @@ func TestPreserveReferencedInlineResourcesRejectsBrokenCID(t *testing.T) {
 	)
 	if err == nil || !strings.Contains(err.Error(), "no matching MIME part") {
 		t.Fatalf("expected missing CID error, got %v", err)
+	}
+}
+
+func TestReferencedContentIDsOnlyScansResourceReferences(t *testing.T) {
+	htmlBody := `<p>Literal <code>cid:not-a-resource</code></p>
+<img src="cid:image-1%40example.com" srcset="cid:image-2@example.com 2x">
+<div style="background-image: url('cid:image-3@example.com')"></div>
+<style>.hero { background: url(cid:image-4@example.com) }</style>`
+
+	got := referencedContentIDs(htmlBody)
+	want := []string{
+		"image-1@example.com",
+		"image-2@example.com",
+		"image-3@example.com",
+		"image-4@example.com",
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("referencedContentIDs = %#v, want %#v", got, want)
+	}
+
+	resources, err := preserveReferencedInlineResources(
+		t.Context(),
+		nil,
+		"msg-literal-cid",
+		&gmail.MessagePart{},
+		`<p>Document <code>cid:example</code> syntax.</p>`,
+	)
+	if err != nil {
+		t.Fatalf("literal CID text returned error: %v", err)
+	}
+	if len(resources) != 0 {
+		t.Fatalf("literal CID text returned resources: %#v", resources)
 	}
 }
 
