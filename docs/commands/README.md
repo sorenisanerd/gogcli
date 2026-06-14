@@ -683,6 +683,8 @@ Generated pages: 644.
       - [gog youtube playlists add](gog-youtube-playlists-add.md) - Add a video to a playlist
       - [gog youtube playlists create](gog-youtube-playlists-create.md) - Create a new playlist
       - [gog youtube playlists delete](gog-youtube-playlists-delete.md) - Delete a playlist
+      - [gog youtube playlists items](gog-youtube-playlists-items.md) - List the videos inside a playlist
+        - [gog youtube playlists items list](gog-youtube-playlists-items-list.md) - List the videos inside a playlist
       - [gog youtube playlists list](gog-youtube-playlists-list.md) - List playlists by channel or authenticated user
       - [gog youtube playlists remove](gog-youtube-playlists-remove.md) - Remove a video from a playlist
     - [gog youtube search](gog-youtube-search.md) - Search YouTube for videos, channels, or playlists
@@ -692,7 +694,7 @@ Generated pages: 644.
       - [gog youtube subscriptions subscribe](gog-youtube-subscriptions-subscribe.md) - Subscribe to a channel
       - [gog youtube subscriptions unsubscribe](gog-youtube-subscriptions-unsubscribe.md) - Unsubscribe from a channel
     - [gog youtube videos](gog-youtube-videos.md) - List or get videos
-      - [gog youtube videos list](gog-youtube-videos-list.md) - List videos by ID or chart
+      - [gog youtube videos list](gog-youtube-videos-list.md) - List videos by ID, chart, or your rating
   - [gog zoom](gog-zoom.md) - Zoom
     - [gog zoom auth](gog-zoom-auth.md) - Manage Zoom Server-to-Server OAuth credentials
       - [gog zoom auth doctor](gog-zoom-auth-doctor.md) - Validate Zoom credentials
