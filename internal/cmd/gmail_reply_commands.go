@@ -3,8 +3,10 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
+	"github.com/steipete/gogcli/internal/mailmime"
 	"github.com/steipete/gogcli/internal/ui"
 )
 
@@ -58,10 +60,10 @@ func (c *GmailReplyOptions) run(ctx context.Context, flags *RootFlags, messageID
 	if strings.TrimSpace(body) == "" && strings.TrimSpace(htmlBody) == "" {
 		return usage("required: --body, --body-file, --body-html, or --body-html-file")
 	}
-	if validationErr := validateHeaderValue(c.Subject); validationErr != nil {
+	if validationErr := mailmime.ValidateHeaderValue(c.Subject); validationErr != nil {
 		return usagef("invalid --subject: %v", validationErr)
 	}
-	if validationErr := validateHeaderValue(c.From); validationErr != nil {
+	if validationErr := mailmime.ValidateHeaderValue(c.From); validationErr != nil {
 		return usagef("invalid --from: %v", validationErr)
 	}
 	if _, parseErr := parseExplicitRecipientFields(c.To, c.Cc, c.Bcc); parseErr != nil {
@@ -154,11 +156,11 @@ func (c *GmailReplyOptions) run(ctx context.Context, flags *RootFlags, messageID
 		info.ThreadID = ""
 	}
 
-	userAttachments, attachmentMetadata, err := prepareMailAttachments(attachmentsFromPaths(attachPaths))
+	userAttachments, attachmentMetadata, err := mailmime.PrepareAttachments(attachmentsFromPaths(attachPaths), os.ReadFile)
 	if err != nil {
 		return err
 	}
-	attachments := append([]mailAttachment{}, userAttachments...)
+	attachments := append([]mailmime.Attachment{}, userAttachments...)
 	attachments = append(attachments, info.InlineResources...)
 
 	msg, err := buildGmailMessage(ctx, sendMessageOptions{
@@ -172,7 +174,7 @@ func (c *GmailReplyOptions) run(ctx context.Context, flags *RootFlags, messageID
 		To:  formatMailboxes(recipients.To),
 		Cc:  formatMailboxes(recipients.Cc),
 		Bcc: formatMailboxes(recipients.Bcc),
-	}, &rfc822Config{allowMissingTo: true})
+	}, true)
 	if err != nil {
 		return fmt.Errorf("build reply: %w", err)
 	}

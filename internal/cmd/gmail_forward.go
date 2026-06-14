@@ -107,7 +107,7 @@ func (c *GmailForwardCmd) Run(ctx context.Context, flags *RootFlags) error {
 		To:  toRecipients,
 		Cc:  ccRecipients,
 		Bcc: bccRecipients,
-	}, nil)
+	}, false)
 	if err != nil {
 		return fmt.Errorf("build message: %w", err)
 	}

@@ -6,6 +6,10 @@
 
 - Gmail: add first-class `gmail reply` and `gmail reply-all` commands with inherited `Re:` subjects, quoted originals by default, preserved display names and CID inline images, additive recipient placement, automatic moves between To/Cc/Bcc, and repeatable `--remove`; reply-mode `gmail send` also inherits omitted subjects, while forwards preserve inline images without incorrectly claiming the original reply thread.
 
+### Fixed
+
+- Docs: reject ambiguous `docs cat --tab ... --all-tabs` and MCP `docs_get` requests before contacting the Docs API. (#801) — thanks @kiranmagic7.
+
 ## 0.26.0 - 2026-06-14
 
 ### Added

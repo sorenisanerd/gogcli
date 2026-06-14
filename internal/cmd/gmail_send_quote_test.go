@@ -98,7 +98,7 @@ func TestApplyQuoteToBodiesDerivesPlainReplyFromHTML(t *testing.T) {
 func TestApplyQuoteToBodiesOmitsNonVisibleHTMLFromPlainReply(t *testing.T) {
 	plain, _ := applyQuoteToBodies(
 		"",
-		`<!doctype html><html><head><title>Hidden title</title><style>.secret { color: red; }</style><script>alert("hidden")</script></head><body><p>Visible reply</p></body></html>`,
+		`<!doctype html><html><head><title>Hidden title</title><style>.secret { color: red; }</style><script>alert("hidden")</script></head><body><span style="display:none">Hidden preheader</span><span hidden>Hidden attribute</span><span aria-hidden="true">Hidden aria</span><p>Visible reply</p></body></html>`,
 		true,
 		&replyInfo{
 			Body:     "Original plain",
@@ -109,7 +109,7 @@ func TestApplyQuoteToBodiesOmitsNonVisibleHTMLFromPlainReply(t *testing.T) {
 	if !strings.Contains(plain, "Visible reply") || !strings.Contains(plain, "> Original plain") {
 		t.Fatalf("plain body missing visible reply or quote: %q", plain)
 	}
-	for _, hidden := range []string{"Hidden title", ".secret", `alert("hidden")`} {
+	for _, hidden := range []string{"Hidden title", ".secret", `alert("hidden")`, "Hidden preheader", "Hidden attribute", "Hidden aria"} {
 		if strings.Contains(plain, hidden) {
 			t.Fatalf("plain body included non-visible HTML %q: %q", hidden, plain)
 		}

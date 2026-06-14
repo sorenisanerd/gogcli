@@ -17,6 +17,7 @@ import (
 	gapi "google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
 
+	"github.com/steipete/gogcli/internal/gmailwatch"
 	"github.com/steipete/gogcli/internal/outfmt"
 	"github.com/steipete/gogcli/internal/ui"
 )
@@ -328,15 +329,15 @@ func TestGmailWatchServer_ServeHTTP_HistoryTypes_DeletedOnly(t *testing.T) {
 }
 
 func TestGmailWatchHelpers(t *testing.T) {
-	if got := bearerToken(&http.Request{Header: http.Header{"Authorization": []string{"Bearer tok"}}}); got != "tok" {
+	if got := gmailwatch.BearerToken(&http.Request{Header: http.Header{"Authorization": []string{"Bearer tok"}}}); got != "tok" {
 		t.Fatalf("bearer: %q", got)
 	}
 	r := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/x?token=q", nil)
 	r.Header.Set("x-gog-token", "h")
-	if !sharedTokenMatches(r, "h") {
+	if !gmailwatch.SharedTokenMatches(r, "h") {
 		t.Fatalf("expected shared token match")
 	}
-	if !pathMatches("/x/", "/x/y") || !pathMatches("/x", "/x/y") {
+	if !gmailwatch.PathMatches("/x/", "/x/y") || !gmailwatch.PathMatches("/x", "/x/y") {
 		t.Fatalf("pathMatches")
 	}
 
@@ -470,7 +471,7 @@ func TestGmailWatchServer_OIDCAudience(t *testing.T) {
 	r.Host = "example.com"
 	r.Header.Set("X-Forwarded-Proto", "https")
 	r.Header.Set("X-Forwarded-Host", "proxy.example.com")
-	if got := s.oidcAudience(r); got != "https://proxy.example.com/x" {
+	if got := gmailwatch.Audience(r, s.cfg.OIDCAudience); got != "https://proxy.example.com/x" {
 		t.Fatalf("unexpected audience: %q", got)
 	}
 }

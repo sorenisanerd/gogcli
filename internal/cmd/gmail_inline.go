@@ -9,18 +9,20 @@ import (
 	"strings"
 
 	"google.golang.org/api/gmail/v1"
+
+	"github.com/steipete/gogcli/internal/mailmime"
 )
 
 var cidReferencePattern = regexp.MustCompile(`(?i)cid:([^"'[:space:]<>\)]+)`)
 
-func preserveReferencedInlineResources(ctx context.Context, svc *gmail.Service, messageID string, payload *gmail.MessagePart, htmlBody string) ([]mailAttachment, error) {
+func preserveReferencedInlineResources(ctx context.Context, svc *gmail.Service, messageID string, payload *gmail.MessagePart, htmlBody string) ([]mailmime.Attachment, error) {
 	references := referencedContentIDs(htmlBody)
 	if len(references) == 0 {
 		return nil, nil
 	}
 
 	parts := indexMessagePartsByContentID(payload)
-	out := make([]mailAttachment, 0, len(references))
+	out := make([]mailmime.Attachment, 0, len(references))
 	for _, contentID := range references {
 		part := parts[canonicalContentID(contentID)]
 		if part == nil {
@@ -38,7 +40,7 @@ func preserveReferencedInlineResources(ctx context.Context, svc *gmail.Service, 
 	return out, nil
 }
 
-func preserveForwardMessageParts(ctx context.Context, svc *gmail.Service, messageID string, payload *gmail.MessagePart, htmlBody string, includeAttachments bool) ([]mailAttachment, error) {
+func preserveForwardMessageParts(ctx context.Context, svc *gmail.Service, messageID string, payload *gmail.MessagePart, htmlBody string, includeAttachments bool) ([]mailmime.Attachment, error) {
 	inline, err := preserveReferencedInlineResources(ctx, svc, messageID, payload, htmlBody)
 	if err != nil {
 		return nil, err
@@ -52,7 +54,7 @@ func preserveForwardMessageParts(ctx context.Context, svc *gmail.Service, messag
 		inlineIDs[canonicalContentID(attachment.ContentID)] = struct{}{}
 	}
 
-	out := append([]mailAttachment{}, inline...)
+	out := append([]mailmime.Attachment{}, inline...)
 	var walk func(*gmail.MessagePart) error
 	walk = func(part *gmail.MessagePart) error {
 		if part == nil {
@@ -129,9 +131,9 @@ func indexMessagePartsByContentID(payload *gmail.MessagePart) map[string]*gmail.
 	return out
 }
 
-func mailAttachmentFromMessagePart(ctx context.Context, svc *gmail.Service, messageID string, part *gmail.MessagePart) (mailAttachment, error) {
+func mailAttachmentFromMessagePart(ctx context.Context, svc *gmail.Service, messageID string, part *gmail.MessagePart) (mailmime.Attachment, error) {
 	if part == nil || part.Body == nil {
-		return mailAttachment{}, fmt.Errorf("empty MIME part")
+		return mailmime.Attachment{}, fmt.Errorf("empty MIME part")
 	}
 
 	var (
@@ -149,7 +151,7 @@ func mailAttachmentFromMessagePart(ctx context.Context, svc *gmail.Service, mess
 		err = fmt.Errorf("MIME part has no body data")
 	}
 	if err != nil {
-		return mailAttachment{}, err
+		return mailmime.Attachment{}, err
 	}
 
 	fallbackFilename := defaultAttachmentFilename
@@ -157,7 +159,7 @@ func mailAttachmentFromMessagePart(ctx context.Context, svc *gmail.Service, mess
 		fallbackFilename = "inline"
 	}
 	filename := sanitizeAttachmentFilename(part.Filename, fallbackFilename)
-	return mailAttachment{
+	return mailmime.Attachment{
 		Filename: filename,
 		MIMEType: strings.TrimSpace(part.MimeType),
 		Data:     data,

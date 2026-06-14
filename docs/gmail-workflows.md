@@ -51,7 +51,7 @@ Command pages:
 Block send operations globally for one run:
 
 ```bash
-gog --gmail-no-send gmail send --to you@example.com --subject test --text body
+gog --gmail-no-send gmail send --to you@example.com --subject test --body body
 ```
 
 Or use the environment variable in agent shells:

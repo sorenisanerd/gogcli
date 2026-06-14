@@ -129,6 +129,9 @@ func htmlToPlainText(value string) string {
 		case nethtml.TextNode:
 			out.WriteString(n.Data)
 		case nethtml.ElementNode:
+			if hiddenHTMLElement(n) {
+				return
+			}
 			switch strings.ToLower(n.Data) {
 			case "head", "style", "script", "template", "noscript", literalTitle:
 				return
@@ -158,6 +161,50 @@ func htmlToPlainText(value string) string {
 		}
 	}
 	return strings.Join(kept, "\n")
+}
+
+func hiddenHTMLElement(n *nethtml.Node) bool {
+	for _, attr := range n.Attr {
+		switch strings.ToLower(attr.Key) {
+		case "hidden":
+			return true
+		case "aria-hidden":
+			if strings.EqualFold(strings.TrimSpace(attr.Val), "true") {
+				return true
+			}
+		case "type":
+			if strings.EqualFold(n.Data, "input") && strings.EqualFold(strings.TrimSpace(attr.Val), "hidden") {
+				return true
+			}
+		case "style":
+			if hiddenInlineStyle(attr.Val) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func hiddenInlineStyle(value string) bool {
+	for declaration := range strings.SplitSeq(value, ";") {
+		property, setting, ok := strings.Cut(declaration, ":")
+		if !ok {
+			continue
+		}
+		property = strings.ToLower(strings.TrimSpace(property))
+		setting = strings.ToLower(strings.TrimSpace(setting))
+		switch property {
+		case "display", "visibility":
+			if strings.HasPrefix(setting, "none") || strings.HasPrefix(setting, "hidden") {
+				return true
+			}
+		case "mso-hide":
+			if strings.HasPrefix(setting, "all") {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func writeHTMLNewline(out *strings.Builder) {

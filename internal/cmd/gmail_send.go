@@ -3,10 +3,12 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"google.golang.org/api/gmail/v1"
 
+	"github.com/steipete/gogcli/internal/mailmime"
 	"github.com/steipete/gogcli/internal/tracking"
 	"github.com/steipete/gogcli/internal/ui"
 )
@@ -56,7 +58,7 @@ type sendMessageOptions struct {
 	BodyHTML    string
 	ReplyInfo   *replyInfo
 	Headers     map[string]string
-	Attachments []mailAttachment
+	Attachments []mailmime.Attachment
 	Track       bool
 	TrackingCfg *tracking.Config
 }
@@ -187,7 +189,7 @@ func (c *GmailSendCmd) Run(ctx context.Context, flags *RootFlags) error {
 
 	bccRecipients := splitCSV(c.Bcc)
 
-	atts, attachmentMetadata, err := prepareMailAttachments(attachmentsFromPaths(attachPaths))
+	atts, attachmentMetadata, err := mailmime.PrepareAttachments(attachmentsFromPaths(attachPaths), os.ReadFile)
 	if err != nil {
 		return err
 	}
@@ -341,7 +343,7 @@ func sendGmailBatches(ctx context.Context, svc *gmail.Service, opts sendMessageO
 
 		messageOpts := opts
 		messageOpts.BodyHTML = htmlBody
-		msg, err := buildGmailMessage(ctx, messageOpts, batch, nil)
+		msg, err := buildGmailMessage(ctx, messageOpts, batch, false)
 		if err != nil {
 			return nil, err
 		}
@@ -366,7 +368,7 @@ func sendGmailBatches(ctx context.Context, svc *gmail.Service, opts sendMessageO
 	return results, nil
 }
 
-func writeSendResults(ctx context.Context, u *ui.UI, fromAddr string, results []sendResult, attachments []mailAttachmentMetadata) error {
+func writeSendResults(ctx context.Context, u *ui.UI, fromAddr string, results []sendResult, attachments []mailmime.AttachmentMetadata) error {
 	items := make([]gmailMessageResult, 0, len(results))
 	for _, r := range results {
 		items = append(items, gmailMessageResult{

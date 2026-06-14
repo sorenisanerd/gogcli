@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"google.golang.org/api/gmail/v1"
+
+	"github.com/steipete/gogcli/internal/mailmime"
 )
 
 // buildReplyAllRecipients constructs To and Cc lists for a reply-all.
@@ -35,7 +37,7 @@ type replyInfo struct {
 	Subject         string
 	Body            string
 	BodyHTML        string
-	InlineResources []mailAttachment
+	InlineResources []mailmime.Attachment
 }
 
 func replyHeaders(ctx context.Context, svc *gmail.Service, replyToMessageID string) (inReplyTo string, references string, threadID string, err error) {
