@@ -1,7 +1,14 @@
 # Changelog
 
-## 0.30.1 - Unreleased
+## 0.31.1 - Unreleased
 
+## 0.31.0 - 2026-06-24
+
+- Gmail: preserve HTML fragments from `--signature-file` instead of escaping their markup, without broadening HTML detection for message display or reply quoting. (#879) — thanks @kesslerio.
+- Docs: honor `--tab` when setting document layout so `page-layout --tab` (and `write --pageless --tab`) target the specified tab instead of always the default tab. Page layout is per-tab; previously these silently no-opped on secondary tabs of multi-tab documents. (#878) — thanks @atmasphere.
+- Auth: recover from corrupt stored OAuth token payloads by routing only classified decode corruption through the normal re-authentication flow while preserving operational keyring errors. (#872, #874) — thanks @KrasimirKralev.
+- Calendar: add repeatable or comma-separated `events --event-types` filtering across single, selected, and all-calendar listings while preserving the existing unfiltered default. (#870) — thanks @malob.
+- Gmail: render quoted-reply and forwarded-message dates in Gmail's human-readable style using the configured account timezone. (#873) — thanks @malob.
 - Evals: add reproducible structural and live Codex/OpenClaw gog/gws comparisons with correctness assertions, token/tool/latency metrics, cache-counterbalanced repetitions, methodology, and CI coverage.
 - CLI: add `GOG_HELP=agent` compact root help with common read-only recipes and targeted schema guidance so agents can execute Gmail, Calendar, and Drive tasks without traversing multiple help levels.
 - Auth: add `auth setup` for guided Google Cloud project/API preparation, OAuth client installation, and optional browser authorization.
