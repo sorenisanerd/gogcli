@@ -14,16 +14,15 @@ import (
 )
 
 type CalendarChangedCmd struct {
-	CalendarID  []string `arg:"" name:"calendarId" optional:"" help:"Calendar ID (default: primary)"`
-	Cal         []string `name:"cal" help:"Calendar ID or name (can be repeated)"`
-	Calendars   string   `name:"calendars" help:"Comma-separated calendar IDs, names, or indices from 'calendar calendars'"`
-	Since       string   `name:"since" help:"Lower bound for last-modification time (RFC3339, date, or Go duration: 24h, 168h). Default: 720h (30 days)."`
-	Max         int64    `name:"max" aliases:"limit" help:"Max results" default:"10"`
-	All         bool     `name:"all" help:"Fetch from all calendars"`
-	ShowDeleted bool     `name:"show-deleted" help:"Include deleted events"`
-	FailEmpty   bool     `name:"fail-empty" aliases:"non-empty,require-results" help:"Exit with code 3 if no results"`
-	Weekday     bool     `name:"weekday" help:"Include start/end day-of-week columns"`
-	Location    bool     `name:"location" help:"Include event LOCATION column in table output"`
+	CalendarID string   `arg:"" name:"calendarId" optional:"" help:"Calendar ID (default: primary)"`
+	Cal        []string `name:"cal" help:"Calendar ID or name (can be repeated)"`
+	Calendars  string   `name:"calendars" help:"Comma-separated calendar IDs, names, or indices from 'calendar calendars'"`
+	Since      string   `name:"since" help:"Lower bound for last-modification time (RFC3339, date, or Go duration: 24h, 168h). Default: 720h (30 days)."`
+	Max        int64    `name:"max" aliases:"limit" help:"Max results" default:"10"`
+	All        bool     `name:"all" help:"Fetch from all calendars"`
+	FailEmpty  bool     `name:"fail-empty" aliases:"non-empty,require-results" help:"Exit with code 3 if no results"`
+	Weekday    bool     `name:"weekday" help:"Include start/end day-of-week columns"`
+	Location   bool     `name:"location" help:"Include event LOCATION column in table output"`
 }
 
 func (c *CalendarChangedCmd) Run(ctx context.Context, flags *RootFlags) error {
@@ -45,10 +44,7 @@ func (c *CalendarChangedCmd) Run(ctx context.Context, flags *RootFlags) error {
 		return err
 	}
 
-	calendarID, err := normalizeCalendarEventsArgs(c.CalendarID)
-	if err != nil {
-		return err
-	}
+	calendarID := strings.TrimSpace(c.CalendarID)
 	calInputs := append([]string{}, c.Cal...)
 	if strings.TrimSpace(c.Calendars) != "" {
 		calInputs = append(calInputs, splitCSV(c.Calendars)...)
@@ -64,9 +60,9 @@ func (c *CalendarChangedCmd) Run(ctx context.Context, flags *RootFlags) error {
 
 	switch {
 	case c.All:
-		cals, err := listCalendarList(ctx, svc)
-		if err != nil {
-			return err
+		cals, listErr := listCalendarList(ctx, svc)
+		if listErr != nil {
+			return listErr
 		}
 		ids := make([]string, 0, len(cals))
 		for _, cal := range cals {
@@ -76,9 +72,9 @@ func (c *CalendarChangedCmd) Run(ctx context.Context, flags *RootFlags) error {
 		}
 		return c.listChangedMulti(ctx, svc, ids, sinceRFC3339, calendarTimezoneHints(cals))
 	case len(calInputs) > 0:
-		ids, err := resolveCalendarIDs(ctx, store, svc, calInputs)
-		if err != nil {
-			return err
+		ids, resolveErr := resolveCalendarIDs(ctx, store, svc, calInputs)
+		if resolveErr != nil {
+			return resolveErr
 		}
 		if len(ids) == 0 {
 			return usage("no calendars specified")
@@ -107,7 +103,7 @@ func (c *CalendarChangedCmd) resolveSince() (time.Time, error) {
 func (c *CalendarChangedCmd) listChangedSingle(ctx context.Context, svc *calendar.Service, calendarID, since string) error {
 	calendarTimezone, loc := calendarDisplayTimezone(ctx, svc, calendarID, nil)
 
-	items, err := fetchChangedEvents(ctx, svc, calendarID, since, c.ShowDeleted)
+	items, err := fetchChangedEvents(ctx, svc, calendarID, since)
 	if err != nil {
 		return err
 	}
@@ -135,7 +131,7 @@ func (c *CalendarChangedCmd) listChangedMulti(ctx context.Context, svc *calendar
 			continue
 		}
 		calendarTimezone, loc := calendarDisplayTimezone(ctx, svc, calID, hints)
-		items, err := fetchChangedEvents(ctx, svc, calID, since, c.ShowDeleted)
+		items, err := fetchChangedEvents(ctx, svc, calID, since)
 		if err != nil {
 			u.Err().Linef("calendar %s: %v", calID, err)
 			continue
@@ -154,11 +150,13 @@ func (c *CalendarChangedCmd) listChangedMulti(ctx context.Context, svc *calendar
 	return c.writeOutput(ctx, all, since, true)
 }
 
-func fetchChangedEvents(ctx context.Context, svc *calendar.Service, calendarID, since string, showDeleted bool) ([]*calendar.Event, error) {
+func fetchChangedEvents(ctx context.Context, svc *calendar.Service, calendarID, since string) ([]*calendar.Event, error) {
 	fetch := func(pageToken string) ([]*calendar.Event, string, error) {
+		// Calendar always returns entries deleted since updatedMin. Request them
+		// explicitly too: deletions are changes and belong in this command's output.
 		call := svc.Events.List(calendarID).
 			UpdatedMin(since).
-			ShowDeleted(showDeleted).
+			ShowDeleted(true).
 			OrderBy("updated").
 			MaxResults(250).
 			Context(ctx)

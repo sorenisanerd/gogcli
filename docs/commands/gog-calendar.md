@@ -19,7 +19,7 @@ gog calendar (cal) <command> [flags]
 - [gog calendar acl](gog-calendar-acl.md) - List calendar ACL
 - [gog calendar alias](gog-calendar-alias.md) - Manage calendar aliases
 - [gog calendar calendars](gog-calendar-calendars.md) - List calendars
-- [gog calendar changed](gog-calendar-changed.md) - List most recently changed events
+- [gog calendar changed](gog-calendar-changed.md) - List most recently changed events (including deletions)
 - [gog calendar colors](gog-calendar-colors.md) - Show calendar colors
 - [gog calendar conflicts](gog-calendar-conflicts.md) - Find busy-time overlaps across calendars
 - [gog calendar create](gog-calendar-create.md) - Create an event

@@ -12,8 +12,10 @@ import (
 )
 
 func TestCalendarChanged_JSON(t *testing.T) {
+	var showDeleted string
 	svc, closeServer := newCalendarServiceForTest(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "/calendars/primary/events") && r.Method == http.MethodGet {
+			showDeleted = r.URL.Query().Get("showDeleted")
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"items": []map[string]any{
@@ -30,6 +32,12 @@ func TestCalendarChanged_JSON(t *testing.T) {
 						"updated": "2026-06-12T09:00:00Z",
 						"start":   map[string]any{"dateTime": "2026-06-20T10:00:00Z"},
 						"end":     map[string]any{"dateTime": "2026-06-20T11:00:00Z"},
+					},
+					{
+						"id":      "e3",
+						"summary": "Deleted event",
+						"status":  "cancelled",
+						"updated": "2026-06-13T09:00:00Z",
 					},
 				},
 			})
@@ -59,15 +67,18 @@ func TestCalendarChanged_JSON(t *testing.T) {
 	if err := json.Unmarshal(output.Bytes(), &parsed); err != nil {
 		t.Fatalf("json parse: %v", err)
 	}
-	if len(parsed.Events) != 2 {
-		t.Fatalf("expected 2 events, got %d", len(parsed.Events))
+	if showDeleted != "true" {
+		t.Fatalf("showDeleted = %q, want true", showDeleted)
+	}
+	if len(parsed.Events) != 3 {
+		t.Fatalf("expected 3 events, got %d", len(parsed.Events))
 	}
 	// Most recently updated event should come first (descending order).
-	if parsed.Events[0]["id"] != "e2" {
-		t.Errorf("expected e2 first (more recent updated), got %v", parsed.Events[0]["id"])
+	if parsed.Events[0]["id"] != "e3" {
+		t.Errorf("expected deleted e3 first (more recent updated), got %v", parsed.Events[0]["id"])
 	}
-	if parsed.Events[1]["id"] != "e1" {
-		t.Errorf("expected e1 second, got %v", parsed.Events[1]["id"])
+	if parsed.Events[1]["id"] != "e2" || parsed.Events[2]["id"] != "e1" {
+		t.Errorf("expected remaining events in descending order, got %v then %v", parsed.Events[1]["id"], parsed.Events[2]["id"])
 	}
 	if parsed.Since == "" {
 		t.Error("expected since field in JSON output")

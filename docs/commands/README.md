@@ -138,7 +138,7 @@ Generated pages: 700.
       - [gog calendar alias set](gog-calendar-alias-set.md) - Set a calendar alias
       - [gog calendar alias unset](gog-calendar-alias-unset.md) - Remove a calendar alias
     - [gog calendar calendars](gog-calendar-calendars.md) - List calendars
-    - [gog calendar changed](gog-calendar-changed.md) - List most recently changed events
+    - [gog calendar changed](gog-calendar-changed.md) - List most recently changed events (including deletions)
     - [gog calendar colors](gog-calendar-colors.md) - Show calendar colors
     - [gog calendar conflicts](gog-calendar-conflicts.md) - Find busy-time overlaps across calendars
     - [gog calendar create](gog-calendar-create.md) - Create an event
